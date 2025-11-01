@@ -5,23 +5,26 @@
 set -e
 cd "$(dirname "$0")/libvscode-diff"
 
+# Detect platform for library extension
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    PLATFORM="Darwin"
+    LIB_EXT="dylib"
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    PLATFORM="Linux"
+    LIB_EXT="so"
+else
+    PLATFORM="Unknown"
+    LIB_EXT="so"
+fi
+
 echo "Building vscode_diff (standalone mode)..."
 echo "Compiler: /usr/bin/cc"
-echo "Platform: Darwin"
+echo "Platform: $PLATFORM"
 
 # Compiler and flags from CMake configuration
 CC="/usr/bin/cc"
 CFLAGS=" -Wall -Wextra -O2 -DNDEBUG -Iinclude -Ivendor -fPIC"
 LDFLAGS="-shared -lm"
-
-# Detect platform for library extension
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    LIB_EXT="dylib"
-elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    LIB_EXT="so"
-else
-    LIB_EXT="so"
-fi
 
 # Source files (including bundled utf8proc)
 SOURCES="\
