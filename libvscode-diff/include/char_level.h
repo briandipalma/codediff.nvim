@@ -25,8 +25,8 @@
  * Options for character-level refinement
  */
 typedef struct {
-    bool consider_whitespace_changes;  // If false, trim whitespace
-    bool extend_to_subwords;           // If true, extend to CamelCase subwords
+  bool consider_whitespace_changes; // If false, trim whitespace
+  bool extend_to_subwords;          // If true, extend to CamelCase subwords
 } CharLevelOptions;
 
 /**
@@ -57,13 +57,9 @@ typedef struct {
  * @param out_hit_timeout Output: Set to true if timeout occurred, can be NULL
  * @return RangeMappingArray* Character-level mappings (caller must free)
  */
-RangeMappingArray* refine_diff_char_level(
-    const SequenceDiff* line_diff,
-    const char** lines_a, int len_a,
-    const char** lines_b, int len_b,
-    const CharLevelOptions* options,
-    bool* out_hit_timeout
-);
+RangeMappingArray *refine_diff_char_level(const SequenceDiff *line_diff, const char **lines_a,
+                                          int len_a, const char **lines_b, int len_b,
+                                          const CharLevelOptions *options, bool *out_hit_timeout);
 
 /**
  * Refine all line-level diffs to character-level - VSCode Parity
@@ -83,17 +79,15 @@ RangeMappingArray* refine_diff_char_level(
  * @param out_hit_timeout Output: Set to true if any timeout occurred, can be NULL
  * @return RangeMappingArray* All character-level mappings (caller must free)
  */
-RangeMappingArray* refine_all_diffs_char_level(
-    const SequenceDiffArray* line_diffs,
-    const char** lines_a, int len_a,
-    const char** lines_b, int len_b,
-    const CharLevelOptions* options,
-    bool* out_hit_timeout
-);
+RangeMappingArray *refine_all_diffs_char_level(const SequenceDiffArray *line_diffs,
+                                               const char **lines_a, int len_a,
+                                               const char **lines_b, int len_b,
+                                               const CharLevelOptions *options,
+                                               bool *out_hit_timeout);
 
 /**
  * Helper: Free RangeMappingArray
  */
-void free_range_mapping_array(RangeMappingArray* arr);
+void free_range_mapping_array(RangeMappingArray *arr);
 
 #endif // CHAR_LEVEL_H

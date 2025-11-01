@@ -25,14 +25,15 @@
  * 
  * Returns: Allocated copy of string (caller must free), or NULL on failure
  */
-static inline char* diff_strdup(const char* s) {
-    if (!s) return NULL;
-    size_t len = strlen(s) + 1;
-    char* copy = (char*)malloc(len);
-    if (copy) {
-        memcpy(copy, s, len);
-    }
-    return copy;
+static inline char *diff_strdup(const char *s) {
+  if (!s)
+    return NULL;
+  size_t len = strlen(s) + 1;
+  char *copy = (char *)malloc(len);
+  if (copy) {
+    memcpy(copy, s, len);
+  }
+  return copy;
 }
 
 // ============================================================================
@@ -40,17 +41,17 @@ static inline char* diff_strdup(const char* s) {
 // ============================================================================
 
 #ifdef _WIN32
-    // Windows platform
-    #include <io.h>
-    #define diff_isatty _isatty
-    #define diff_fileno _fileno
+// Windows platform
+#include <io.h>
+#define diff_isatty _isatty
+#define diff_fileno _fileno
 #else
-    // POSIX platforms (Linux, macOS, BSD, etc.)
-    // Note: fileno() requires _POSIX_C_SOURCE, defined in Makefile
-    #include <stdio.h>
-    #include <unistd.h>
-    #define diff_isatty isatty
-    #define diff_fileno fileno
+// POSIX platforms (Linux, macOS, BSD, etc.)
+// Note: fileno() requires _POSIX_C_SOURCE, defined in Makefile
+#include <stdio.h>
+#include <unistd.h>
+#define diff_isatty isatty
+#define diff_fileno fileno
 #endif
 
 #endif // PLATFORM_H

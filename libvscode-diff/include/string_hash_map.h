@@ -23,8 +23,8 @@
 #ifndef STRING_HASH_MAP_H
 #define STRING_HASH_MAP_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef struct StringHashMap StringHashMap;
 
@@ -32,7 +32,7 @@ typedef struct StringHashMap StringHashMap;
  * Create a new string hash map
  * Initial capacity will be automatically adjusted
  */
-StringHashMap* string_hash_map_create(void);
+StringHashMap *string_hash_map_create(void);
 
 /**
  * Get or create hash for a string
@@ -46,16 +46,16 @@ StringHashMap* string_hash_map_create(void);
  * @param str The string to hash (will be copied internally)
  * @return Unique integer for this string
  */
-uint32_t string_hash_map_get_or_create(StringHashMap* map, const char* str);
+uint32_t string_hash_map_get_or_create(StringHashMap *map, const char *str);
 
 /**
  * Get current size (number of unique strings)
  */
-int string_hash_map_size(const StringHashMap* map);
+int string_hash_map_size(const StringHashMap *map);
 
 /**
  * Destroy the hash map and free all memory
  */
-void string_hash_map_destroy(StringHashMap* map);
+void string_hash_map_destroy(StringHashMap *map);
 
 #endif // STRING_HASH_MAP_H

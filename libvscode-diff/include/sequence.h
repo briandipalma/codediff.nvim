@@ -1,9 +1,9 @@
 #ifndef SEQUENCE_H
 #define SEQUENCE_H
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "types.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 /**
  * Generic Sequence Interface
@@ -22,12 +22,12 @@
 typedef struct ISequence ISequence;
 
 struct ISequence {
-    // Opaque data pointer - actual sequence implementation
-    void* data;
-    
-    // Function pointers (vtable pattern)
-    
-    /**
+  // Opaque data pointer - actual sequence implementation
+  void *data;
+
+  // Function pointers (vtable pattern)
+
+  /**
      * Get element at offset (typically returns hash/code for fast comparison)
      * 
      * For LineSequence: Returns hash of trimmed line
@@ -35,16 +35,16 @@ struct ISequence {
      * 
      * REUSED BY: Step 1 (Myers), Step 2-3 (optimize), Step 4 (char_level)
      */
-    uint32_t (*getElement)(const ISequence* self, int offset);
-    
-    /**
+  uint32_t (*getElement)(const ISequence *self, int offset);
+
+  /**
      * Get length of sequence
      * 
      * REUSED BY: Step 1 (Myers), Step 2-3 (optimize), Step 4 (char_level)
      */
-    int (*getLength)(const ISequence* self);
-    
-    /**
+  int (*getLength)(const ISequence *self);
+
+  /**
      * Check if two elements are strongly equal (exact comparison)
      * 
      * For LineSequence: Compares original lines including whitespace
@@ -55,9 +55,9 @@ struct ISequence {
      * 
      * REUSED BY: Step 2 (joinSequenceDiffsByShifting)
      */
-    bool (*isStronglyEqual)(const ISequence* self, int offset1, int offset2);
-    
-    /**
+  bool (*isStronglyEqual)(const ISequence *self, int offset1, int offset2);
+
+  /**
      * Get boundary score at position (higher = better boundary)
      * 
      * Used by optimization to shift diffs to natural boundaries like:
@@ -70,12 +70,12 @@ struct ISequence {
      * 
      * Optional: Can be NULL if sequence doesn't support boundary scoring
      */
-    int (*getBoundaryScore)(const ISequence* self, int length);
-    
-    /**
+  int (*getBoundaryScore)(const ISequence *self, int length);
+
+  /**
      * Cleanup function - called when sequence is destroyed
      */
-    void (*destroy)(ISequence* self);
+  void (*destroy)(ISequence *self);
 };
 
 /**
@@ -91,10 +91,10 @@ struct ISequence {
  * VSCode Parity: 100% - Perfect hash guarantees no collisions
  */
 typedef struct {
-    const char** lines;      // Original lines (NOT owned - just a reference)
-    uint32_t* trimmed_hash;  // Perfect hash of each line after trimming (collision-free)
-    int length;
-    bool ignore_whitespace;  // If true, getElement returns hash of trimmed line
+  const char **lines;     // Original lines (NOT owned - just a reference)
+  uint32_t *trimmed_hash; // Perfect hash of each line after trimming (collision-free)
+  int length;
+  bool ignore_whitespace; // If true, getElement returns hash of trimmed line
 } LineSequence;
 
 // Forward declare StringHashMap
@@ -116,8 +116,8 @@ typedef struct StringHashMap StringHashMap;
  * 
  * VSCode Parity: 100% - Perfect hash implementation
  */
-ISequence* line_sequence_create(const char** lines, int length, bool ignore_whitespace,
-                               StringHashMap* hash_map);
+ISequence *line_sequence_create(const char **lines, int length, bool ignore_whitespace,
+                                StringHashMap *hash_map);
 
 /**
  * CharSequence - Sequence of characters with line boundary tracking
@@ -130,13 +130,13 @@ ISequence* line_sequence_create(const char** lines, int length, bool ignore_whit
  * VSCode Reference: src/vs/editor/common/diff/defaultLinesDiffComputer/linesSliceCharSequence.ts
  */
 typedef struct {
-    uint32_t* elements;              // Character codes (trimmed if !consider_whitespace)
-    int length;                      // Length of elements array
-    int* line_start_offsets;         // Offset where each line starts in elements array
-    int* trimmed_ws_lengths;         // Leading whitespace trimmed from each line (0 if consider_whitespace)
-    int* original_line_start_cols;   // Starting column in original line for each line
-    int line_count;                  // Number of lines tracked
-    bool consider_whitespace;        // If false, whitespace is trimmed before diffing
+  uint32_t *elements;      // Character codes (trimmed if !consider_whitespace)
+  int length;              // Length of elements array
+  int *line_start_offsets; // Offset where each line starts in elements array
+  int *trimmed_ws_lengths; // Leading whitespace trimmed from each line (0 if consider_whitespace)
+  int *original_line_start_cols; // Starting column in original line for each line
+  int line_count;                // Number of lines tracked
+  bool consider_whitespace;      // If false, whitespace is trimmed before diffing
 } CharSequence;
 
 /**
@@ -153,7 +153,7 @@ typedef struct {
  * 
  * REUSED BY: Step 4 (character refinement for each line diff)
  */
-ISequence* char_sequence_create(const char** lines, int start_line, int end_line, 
+ISequence *char_sequence_create(const char **lines, int start_line, int end_line,
                                 bool consider_whitespace);
 
 /**
@@ -168,10 +168,8 @@ ISequence* char_sequence_create(const char** lines, int start_line, int end_line
  * @param consider_whitespace If false, trim whitespace before diffing
  * @return ISequence* that wraps the CharSequence
  */
-ISequence* char_sequence_create_from_range(const char** lines,
-                                           int line_count,
-                                           const CharRange* range,
-                                           bool consider_whitespace);
+ISequence *char_sequence_create_from_range(const char **lines, int line_count,
+                                           const CharRange *range, bool consider_whitespace);
 
 /**
  * Offset preference for translate operations - VSCode Parity
@@ -181,8 +179,8 @@ ISequence* char_sequence_create_from_range(const char** lines,
  * VSCode: 'left' | 'right' parameter in translateOffset()
  */
 typedef enum {
-    OFFSET_PREFERENCE_LEFT,   // Do not add trimmed whitespace when at line start
-    OFFSET_PREFERENCE_RIGHT   // Always add trimmed whitespace (default)
+  OFFSET_PREFERENCE_LEFT, // Do not add trimmed whitespace when at line start
+  OFFSET_PREFERENCE_RIGHT // Always add trimmed whitespace (default)
 } OffsetPreference;
 
 /**
@@ -201,9 +199,8 @@ typedef enum {
  * 
  * REUSED BY: Step 4 (char_level.c) when building RangeMapping
  */
-void char_sequence_translate_offset(const CharSequence* seq, int offset,
-                                    OffsetPreference preference,
-                                    int* out_line, int* out_col);
+void char_sequence_translate_offset(const CharSequence *seq, int offset,
+                                    OffsetPreference preference, int *out_line, int *out_col);
 
 /**
  * Find word containing the given offset - VSCode Parity
@@ -219,8 +216,8 @@ void char_sequence_translate_offset(const CharSequence* seq, int offset,
  * @param out_end Output: End offset of word (exclusive)
  * @return true if word found, false if offset is not in a word
  */
-bool char_sequence_find_word_containing(const CharSequence* seq, int offset,
-                                       int* out_start, int* out_end);
+bool char_sequence_find_word_containing(const CharSequence *seq, int offset, int *out_start,
+                                        int *out_end);
 
 /**
  * Find subword containing the given offset - VSCode Parity
@@ -236,8 +233,8 @@ bool char_sequence_find_word_containing(const CharSequence* seq, int offset,
  * @param out_end Output: End offset of subword (exclusive)
  * @return true if subword found, false if offset is not in a word
  */
-bool char_sequence_find_subword_containing(const CharSequence* seq, int offset,
-                                          int* out_start, int* out_end);
+bool char_sequence_find_subword_containing(const CharSequence *seq, int offset, int *out_start,
+                                           int *out_end);
 
 /**
  * Translate character offset range to position range - VSCode Parity
@@ -255,10 +252,9 @@ bool char_sequence_find_subword_containing(const CharSequence* seq, int offset,
  * @param out_end_line Output: End line (0-based)
  * @param out_end_col Output: End column (0-based)
  */
-void char_sequence_translate_range(const CharSequence* seq,
-                                   int start_offset, int end_offset,
-                                   int* out_start_line, int* out_start_col,
-                                   int* out_end_line, int* out_end_col);
+void char_sequence_translate_range(const CharSequence *seq, int start_offset, int end_offset,
+                                   int *out_start_line, int *out_start_col, int *out_end_line,
+                                   int *out_end_col);
 
 /**
  * Count number of lines in character range - VSCode Parity
@@ -270,7 +266,7 @@ void char_sequence_translate_range(const CharSequence* seq,
  * @param end_offset End of range (exclusive)
  * @return Number of lines spanned by the range
  */
-int char_sequence_count_lines_in(const CharSequence* seq, int start_offset, int end_offset);
+int char_sequence_count_lines_in(const CharSequence *seq, int start_offset, int end_offset);
 
 /**
  * Get text for character range - VSCode Parity
@@ -282,7 +278,7 @@ int char_sequence_count_lines_in(const CharSequence* seq, int start_offset, int 
  * @param end_offset End of range (exclusive)
  * @return Newly allocated string (caller must free), or NULL on error
  */
-char* char_sequence_get_text(const CharSequence* seq, int start_offset, int end_offset);
+char *char_sequence_get_text(const CharSequence *seq, int start_offset, int end_offset);
 
 /**
  * Extend range to full lines - VSCode Parity
@@ -297,8 +293,7 @@ char* char_sequence_get_text(const CharSequence* seq, int start_offset, int end_
  * @param out_start Output: Extended start offset
  * @param out_end Output: Extended end offset
  */
-void char_sequence_extend_to_full_lines(const CharSequence* seq, 
-                                       int start_offset, int end_offset,
-                                       int* out_start, int* out_end);
+void char_sequence_extend_to_full_lines(const CharSequence *seq, int start_offset, int end_offset,
+                                        int *out_start, int *out_end);
 
 #endif // SEQUENCE_H

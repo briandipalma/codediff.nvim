@@ -1,7 +1,7 @@
 // ============================================================================
 // Diff API - Main Entry Point
 // ============================================================================
-// 
+//
 // High-level API combining compute_diff and render plan generation.
 // This is the primary interface for Lua/FFI callers.
 //
@@ -28,40 +28,28 @@
  * @param options Diff computation options
  * @return RenderPlan (caller must free)
  */
-RenderPlan* compute_diff_render_plan(
-    const char** original_lines,
-    int original_count,
-    const char** modified_lines,
-    int modified_count,
-    const DiffOptions* options
-) {
-    // Step 1: Compute diff (VSCode-compatible algorithm)
-    LinesDiff* diff = compute_diff(
-        original_lines, original_count,
-        modified_lines, modified_count,
-        options
-    );
-    
-    if (!diff) {
-        return NULL;
-    }
-    
-    // Step 2: Generate render plan for Neovim
-    RenderPlan* plan = generate_render_plan(
-        diff,
-        original_lines, original_count,
-        modified_lines, modified_count
-    );
-    
-    // Cleanup intermediate result
-    free_lines_diff(diff);
-    
-    return plan;
+RenderPlan *compute_diff_render_plan(const char **original_lines, int original_count,
+                                     const char **modified_lines, int modified_count,
+                                     const DiffOptions *options) {
+  // Step 1: Compute diff (VSCode-compatible algorithm)
+  LinesDiff *diff =
+      compute_diff(original_lines, original_count, modified_lines, modified_count, options);
+
+  if (!diff) {
+    return NULL;
+  }
+
+  // Step 2: Generate render plan for Neovim
+  RenderPlan *plan =
+      generate_render_plan(diff, original_lines, original_count, modified_lines, modified_count);
+
+  // Cleanup intermediate result
+  free_lines_diff(diff);
+
+  return plan;
 }
 
 /**
  * Get library version.
  */
-const char* diff_api_get_version(void) {
-    return "0.3.0-full-pipeline";
-}
+const char *diff_api_get_version(void) { return "0.3.0-full-pipeline"; }

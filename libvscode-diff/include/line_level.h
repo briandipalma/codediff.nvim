@@ -1,8 +1,8 @@
 #ifndef LINE_LEVEL_H
 #define LINE_LEVEL_H
 
-#include "types.h"
 #include "sequence.h"
+#include "types.h"
 
 /**
  * Line-Level Diff Computation (Steps 1-3 Consolidation) - FULL VSCODE PARITY
@@ -55,16 +55,12 @@
  * NOTE: This is the consolidation of Steps 1-3, producing the exact same output
  * as VSCode's lineAlignments variable at line 245.
  */
-SequenceDiffArray* compute_line_alignments(
-    const char** lines_a, int len_a,
-    const char** lines_b, int len_b,
-    int timeout_ms,
-    bool* hit_timeout
-);
+SequenceDiffArray *compute_line_alignments(const char **lines_a, int len_a, const char **lines_b,
+                                           int len_b, int timeout_ms, bool *hit_timeout);
 
 /**
  * Helper: Free SequenceDiffArray
  */
-void free_sequence_diff_array(SequenceDiffArray* arr);
+void free_sequence_diff_array(SequenceDiffArray *arr);
 
 #endif // LINE_LEVEL_H

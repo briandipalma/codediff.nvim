@@ -57,13 +57,11 @@ bool line_range_intersects_or_touches(LineRange a, LineRange b);
  * @param modified_line_count Number of modified lines
  * @return DetailedLineRangeMapping with calculated line ranges
  */
-DetailedLineRangeMapping get_line_range_mapping(
-    const RangeMapping* range_mapping,
-    const char** original_lines,
-    int original_line_count,
-    const char** modified_lines,
-    int modified_line_count
-);
+DetailedLineRangeMapping get_line_range_mapping(const RangeMapping *range_mapping,
+                                                const char **original_lines,
+                                                int original_line_count,
+                                                const char **modified_lines,
+                                                int modified_line_count);
 
 /**
  * Convert character-level RangeMappings to line-level DetailedLineRangeMappings.
@@ -83,18 +81,13 @@ DetailedLineRangeMapping get_line_range_mapping(
  * @param dont_assert_start_line If true, skip start line assertions
  * @return Array of DetailedLineRangeMappings (caller must free)
  */
-DetailedLineRangeMappingArray* line_range_mapping_from_range_mappings(
-    const RangeMappingArray* alignments,
-    const char** original_lines,
-    int original_line_count,
-    const char** modified_lines,
-    int modified_line_count,
-    bool dont_assert_start_line
-);
+DetailedLineRangeMappingArray *line_range_mapping_from_range_mappings(
+    const RangeMappingArray *alignments, const char **original_lines, int original_line_count,
+    const char **modified_lines, int modified_line_count, bool dont_assert_start_line);
 
 /**
  * Free DetailedLineRangeMappingArray.
  */
-void free_detailed_line_range_mapping_array(DetailedLineRangeMappingArray* arr);
+void free_detailed_line_range_mapping_array(DetailedLineRangeMappingArray *arr);
 
 #endif // RANGE_MAPPING_H

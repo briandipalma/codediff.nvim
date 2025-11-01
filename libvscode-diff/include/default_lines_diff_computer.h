@@ -19,26 +19,22 @@
  * VSCode Reference: defaultLinesDiffComputer.ts computeDiff()
  * VSCode Parity: 100% (excluding computeMoves and DP algorithm)
  */
-LinesDiff* compute_diff(
-    const char** original_lines,
-    int original_count,
-    const char** modified_lines,
-    int modified_count,
-    const DiffOptions* options
-);
+LinesDiff *compute_diff(const char **original_lines, int original_count,
+                        const char **modified_lines, int modified_count,
+                        const DiffOptions *options);
 
 /**
  * Free LinesDiff structure and all contained data.
  * 
  * @param diff LinesDiff to free (can be NULL)
  */
-void free_lines_diff(LinesDiff* diff);
+void free_lines_diff(LinesDiff *diff);
 
 /**
  * Get library version string.
  * 
  * @return Version string
  */
-const char* get_version(void);
+const char *get_version(void);
 
 #endif // DEFAULT_LINES_DIFF_COMPUTER_H

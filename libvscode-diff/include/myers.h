@@ -1,18 +1,16 @@
 #ifndef MYERS_H
 #define MYERS_H
 
-#include "types.h"
 #include "sequence.h"
+#include "types.h"
 
 /**
  * Equality scoring function for DP algorithm
  * Returns a score indicating how strongly two elements should be matched.
  * Higher scores prefer matching these elements.
  */
-typedef double (*EqualityScoreFn)(const ISequence* seq1, const ISequence* seq2, 
-                                   int offset1, int offset2, void* user_data);
-
-
+typedef double (*EqualityScoreFn)(const ISequence *seq1, const ISequence *seq2, int offset1,
+                                  int offset2, void *user_data);
 
 /**
  * Myers O(MN) DP-based Diff Algorithm
@@ -30,9 +28,9 @@ typedef double (*EqualityScoreFn)(const ISequence* seq1, const ISequence* seq2,
  * 
  * VSCode Reference: dynamicProgrammingDiffing.ts
  */
-SequenceDiffArray* myers_dp_diff_algorithm(const ISequence* seq1, const ISequence* seq2,
-                                           int timeout_ms, bool* hit_timeout,
-                                           EqualityScoreFn score_fn, void* user_data);
+SequenceDiffArray *myers_dp_diff_algorithm(const ISequence *seq1, const ISequence *seq2,
+                                           int timeout_ms, bool *hit_timeout,
+                                           EqualityScoreFn score_fn, void *user_data);
 
 /**
  * Myers O(ND) Forward-only Algorithm (original implementation)
@@ -46,8 +44,8 @@ SequenceDiffArray* myers_dp_diff_algorithm(const ISequence* seq1, const ISequenc
  * @param hit_timeout Output: set to true if timeout was reached
  * @return Array of SequenceDiff structures (caller must free)
  */
-SequenceDiffArray* myers_nd_diff_algorithm(const ISequence* seq1, const ISequence* seq2,
-                                           int timeout_ms, bool* hit_timeout);
+SequenceDiffArray *myers_nd_diff_algorithm(const ISequence *seq1, const ISequence *seq2,
+                                           int timeout_ms, bool *hit_timeout);
 
 /**
  * Legacy wrapper for backward compatibility
@@ -57,7 +55,7 @@ SequenceDiffArray* myers_nd_diff_algorithm(const ISequence* seq1, const ISequenc
  * 
  * @deprecated Use compute_line_alignments() from line_level.h instead
  */
-SequenceDiffArray* myers_diff_lines(const char** lines_a, int len_a,
-                                    const char** lines_b, int len_b);
+SequenceDiffArray *myers_diff_lines(const char **lines_a, int len_a, const char **lines_b,
+                                    int len_b);
 
 #endif // MYERS_H

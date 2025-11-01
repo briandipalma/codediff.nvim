@@ -21,19 +21,15 @@
  * @param modified_count Number of lines in modified
  * @return RenderPlan (caller must free with free_render_plan())
  */
-RenderPlan* generate_render_plan(
-    const LinesDiff* diff,
-    const char** original_lines,
-    int original_count,
-    const char** modified_lines,
-    int modified_count
-);
+RenderPlan *generate_render_plan(const LinesDiff *diff, const char **original_lines,
+                                 int original_count, const char **modified_lines,
+                                 int modified_count);
 
 /**
  * Free render plan and all contained data.
  * 
  * @param plan RenderPlan to free (can be NULL)
  */
-void free_render_plan(RenderPlan* plan);
+void free_render_plan(RenderPlan *plan);
 
 #endif // RENDER_PLAN_H

@@ -24,19 +24,15 @@
  *   -- use plan.left/right for visualization
  *   lib.free_render_plan(plan)
  */
-RenderPlan* compute_diff_render_plan(
-    const char** original_lines,
-    int original_count,
-    const char** modified_lines,
-    int modified_count,
-    const DiffOptions* options
-);
+RenderPlan *compute_diff_render_plan(const char **original_lines, int original_count,
+                                     const char **modified_lines, int modified_count,
+                                     const DiffOptions *options);
 
 /**
  * Get library version string.
  * 
  * @return Version string
  */
-const char* diff_api_get_version(void);
+const char *diff_api_get_version(void);
 
 #endif // DIFF_API_H

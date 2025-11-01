@@ -1,8 +1,8 @@
 #ifndef OPTIMIZE_H
 #define OPTIMIZE_H
 
-#include "types.h"
 #include "sequence.h"
+#include "types.h"
 
 /**
  * Steps 2-3: Sequence Diff Optimization - FULL VSCODE PARITY
@@ -32,8 +32,8 @@
  * 
  * REUSED BY: Step 4 for character-level optimization
  */
-SequenceDiffArray* optimize_sequence_diffs(const ISequence* seq1, const ISequence* seq2,
-                                          SequenceDiffArray* diffs);
+SequenceDiffArray *optimize_sequence_diffs(const ISequence *seq1, const ISequence *seq2,
+                                           SequenceDiffArray *diffs);
 
 /**
  * Remove short matching regions between diffs - VSCode Parity
@@ -48,8 +48,8 @@ SequenceDiffArray* optimize_sequence_diffs(const ISequence* seq1, const ISequenc
  * 
  * REUSED BY: Step 4 for character-level short match removal
  */
-SequenceDiffArray* remove_short_matches(const ISequence* seq1, const ISequence* seq2,
-                                       SequenceDiffArray* diffs);
+SequenceDiffArray *remove_short_matches(const ISequence *seq1, const ISequence *seq2,
+                                        SequenceDiffArray *diffs);
 
 /**
  * removeVeryShortMatchingLinesBetweenDiffs() - VSCode Parity (LINE-LEVEL Step 3)
@@ -65,10 +65,9 @@ SequenceDiffArray* remove_short_matches(const ISequence* seq1, const ISequence* 
  * 
  * VSCode: removeVeryShortMatchingLinesBetweenDiffs() from heuristicSequenceOptimizations.ts
  */
-SequenceDiffArray* remove_very_short_matching_lines_between_diffs(
-    const ISequence* seq1, 
-    const ISequence* seq2,
-    SequenceDiffArray* diffs);
+SequenceDiffArray *remove_very_short_matching_lines_between_diffs(const ISequence *seq1,
+                                                                  const ISequence *seq2,
+                                                                  SequenceDiffArray *diffs);
 
 /**
  * Legacy wrapper for backward compatibility
@@ -77,8 +76,7 @@ SequenceDiffArray* remove_very_short_matching_lines_between_diffs(
  * 
  * @deprecated Use optimize_sequence_diffs() with ISequence instead
  */
-bool optimize_sequence_diffs_legacy(SequenceDiffArray* diffs,
-                                   const char** lines_a, int len_a,
-                                   const char** lines_b, int len_b);
+bool optimize_sequence_diffs_legacy(SequenceDiffArray *diffs, const char **lines_a, int len_a,
+                                    const char **lines_b, int len_b);
 
 #endif // OPTIMIZE_H
