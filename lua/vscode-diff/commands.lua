@@ -74,10 +74,10 @@ local function handle_file_diff(file_a, file_b)
   local filetype = vim.filetype.match({ filename = file_a })
   
   render.create_diff_view(lines_a, lines_b, lines_diff, {
-    left_type = render.BufferType.SCRATCH,
-    left_config = {},
-    right_type = render.BufferType.SCRATCH,
-    right_config = {},
+    left_type = render.BufferType.REAL_FILE,
+    left_config = { file_path = file_a },
+    right_type = render.BufferType.REAL_FILE,
+    right_config = { file_path = file_b },
     filetype = filetype,
   })
 end

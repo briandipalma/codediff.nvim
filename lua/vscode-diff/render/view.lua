@@ -10,7 +10,6 @@ local virtual_file = require('vscode-diff.virtual_file')
 M.BufferType = {
   VIRTUAL_FILE = "VIRTUAL_FILE",  -- Virtual file (vscodediff://) for LSP semantic tokens
   REAL_FILE = "REAL_FILE",        -- Real file on disk
-  SCRATCH = "SCRATCH"             -- Scratch buffer with no file backing
 }
 
 -- Create a buffer based on its type and configuration
@@ -28,16 +27,12 @@ local function create_buffer(buffer_type, config)
       local buf = vim.api.nvim_create_buf(false, false)
       vim.api.nvim_buf_set_name(buf, config.file_path)
       vim.bo[buf].buftype = ""
-      vim.fn.bufload(buf)
+      -- Only load file if it exists on disk
+      if vim.fn.filereadable(config.file_path) == 1 then
+        vim.fn.bufload(buf)
+      end
       return buf, nil
     end
-  else  -- SCRATCH
-    -- Scratch buffer: temporary, wiped on close
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.bo[buf].modifiable = false
-    vim.bo[buf].buftype = "nofile"
-    vim.bo[buf].bufhidden = "wipe"
-    return buf, nil
   end
 end
 
@@ -46,8 +41,8 @@ end
 -- @param modified_lines table: Lines from the modified version
 -- @param lines_diff table: Diff result from compute_diff
 -- @param opts table: Required settings
---   - left_type string: Buffer type for left buffer (BufferType.VIRTUAL_FILE, REAL_FILE, or SCRATCH)
---   - right_type string: Buffer type for right buffer (BufferType.VIRTUAL_FILE, REAL_FILE, or SCRATCH)
+--   - left_type string: Buffer type for left buffer (BufferType.VIRTUAL_FILE or REAL_FILE)
+--   - right_type string: Buffer type for right buffer (BufferType.VIRTUAL_FILE or REAL_FILE)
 --   - left_config table: Configuration for left buffer (depends on left_type)
 --   - right_config table: Configuration for right buffer (depends on right_type)
 --   - filetype string (optional): Filetype for syntax highlighting
@@ -71,8 +66,25 @@ function M.create(original_lines, modified_lines, lines_diff, opts)
     if left_buf then vim.bo[left_buf].modifiable = true end
     if right_buf then vim.bo[right_buf].modifiable = true end
     
+    -- Determine if we should skip setting buffer content
+    -- Skip if buffer is an existing buffer that already has content loaded
+    local skip_left = false
+    local skip_right = false
+    
+    if opts.left_type == M.BufferType.REAL_FILE then
+      -- Check if buffer already has content (existing buffer with content)
+      local left_lines = vim.api.nvim_buf_get_lines(left_buf, 0, -1, false)
+      skip_left = #left_lines > 1 or (#left_lines == 1 and left_lines[1] ~= "")
+    end
+    
+    if opts.right_type == M.BufferType.REAL_FILE then
+      -- Check if buffer already has content (existing buffer with content)
+      local right_lines = vim.api.nvim_buf_get_lines(right_buf, 0, -1, false)
+      skip_right = #right_lines > 1 or (#right_lines == 1 and right_lines[1] ~= "")
+    end
+    
     result = core.render_diff(left_buf, right_buf, original_lines, modified_lines, lines_diff, 
-                               opts.right_type == M.BufferType.REAL_FILE, false)
+                               skip_right, skip_left)
     
     if left_buf and opts.left_type ~= M.BufferType.REAL_FILE then
       vim.bo[left_buf].modifiable = false
@@ -127,15 +139,6 @@ function M.create(original_lines, modified_lines, lines_diff, opts)
   for opt, val in pairs(win_opts) do
     vim.wo[left_win][opt] = val
     vim.wo[right_win][opt] = val
-  end
-
-  -- Set buffer names for scratch buffers
-  local unique_id = math.random(1000000, 9999999)
-  if opts.left_type == M.BufferType.SCRATCH then
-    pcall(vim.api.nvim_buf_set_name, left_buf, string.format("Original_%d", unique_id))
-  end
-  if opts.right_type == M.BufferType.SCRATCH then
-    pcall(vim.api.nvim_buf_set_name, right_buf, string.format("Modified_%d", unique_id))
   end
   
   -- Set filetype for syntax highlighting (if not VIRTUAL_FILE, which sets its own)

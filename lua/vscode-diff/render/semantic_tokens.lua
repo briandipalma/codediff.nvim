@@ -14,7 +14,6 @@
 -- These are copied from Neovim core because:
 --   1. No public API exists to process semantic token responses
 --   2. STHighlighter class is private and buffer-bound
---   3. We need to apply tokens to scratch buffers (not supported officially)
 --
 -- Version compatibility:
 --   - Neovim 0.9+: Fully supported
