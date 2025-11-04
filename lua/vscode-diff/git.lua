@@ -1,4 +1,5 @@
 -- Git operations module for vscode-diff
+-- All operations are async and atomic
 local M = {}
 
 -- Run a git command asynchronously
@@ -77,73 +78,64 @@ local function run_git_async(args, opts, callback)
   end
 end
 
--- Get git root directory for the given file
-function M.get_git_root(file_path)
+-- ATOMIC ASYNC OPERATIONS
+-- All functions below are simple, atomic git operations
+
+-- Get git root directory for the given file (async)
+-- callback: function(err, git_root)
+function M.get_git_root(file_path, callback)
   local dir = vim.fn.fnamemodify(file_path, ":h")
-  -- Normalize to forward slashes for consistency
   dir = dir:gsub("\\", "/")
 
-  -- Run synchronously for simplicity in this case
-  local result = vim.system and
-    vim.system({ "git", "rev-parse", "--show-toplevel" }, { cwd = dir, text = true }):wait()
-    or nil
-
-  if vim.system then
-    if result and result.code == 0 then
-      local git_root = vim.trim(result.stdout)
-      -- Normalize to forward slashes (git uses forward slashes even on Windows)
-      git_root = git_root:gsub("\\", "/")
-      return git_root
+  run_git_async(
+    { "rev-parse", "--show-toplevel" },
+    { cwd = dir },
+    function(err, output)
+      if err then
+        callback("Not in a git repository", nil)
+      else
+        local git_root = vim.trim(output)
+        git_root = git_root:gsub("\\", "/")
+        callback(nil, git_root)
+      end
     end
-  else
-    -- Fallback for older Neovim
-    local output = vim.fn.systemlist({ "git", "-C", dir, "rev-parse", "--show-toplevel" })
-    if vim.v.shell_error == 0 and #output > 0 then
-      return output[1]
-    end
-  end
-
-  return nil
+  )
 end
 
--- Get relative path of file within git repository
+-- Get relative path of file within git repository (sync, pure computation)
 function M.get_relative_path(file_path, git_root)
   local abs_path = vim.fn.fnamemodify(file_path, ":p")
-  -- Normalize both paths to forward slashes for consistent substring operation
   abs_path = abs_path:gsub("\\", "/")
   git_root = git_root:gsub("\\", "/")
-  local rel_path = abs_path:sub(#git_root + 2) -- +2 for the trailing slash
+  local rel_path = abs_path:sub(#git_root + 2)
   return rel_path
 end
 
--- Check if a file is in a git repository
-function M.is_in_git_repo(file_path)
-  return M.get_git_root(file_path) ~= nil
+-- Resolve a git revision to its commit hash (async, atomic)
+-- revision: branch name, tag, or commit reference
+-- git_root: absolute path to git repository root
+-- callback: function(err, commit_hash)
+function M.resolve_revision(revision, git_root, callback)
+  run_git_async(
+    { "rev-parse", "--verify", revision },
+    { cwd = git_root },
+    function(err, output)
+      if err then
+        callback(string.format("Invalid revision '%s': %s", revision, err), nil)
+      else
+        local commit_hash = vim.trim(output)
+        callback(nil, commit_hash)
+      end
+    end
+  )
 end
 
--- Get file content from a specific git revision
--- revision: e.g., "HEAD", "HEAD~1", commit hash, branch name, tag
--- file_path: absolute path to the file
--- callback: function(err, lines) where lines is a table of strings
-function M.get_file_at_revision(revision, file_path, callback)
-  local git_root = M.get_git_root(file_path)
-
-  if not git_root then
-    callback("Not in a git repository", nil)
-    return
-  end
-
-  local rel_path = M.get_relative_path(file_path, git_root)
-  M.get_file_at_revision_with_root(revision, git_root, rel_path, callback)
-end
-
--- Get file content from a specific git revision (with explicit git_root)
--- This is used by virtual_file.lua which already knows the git_root
+-- Get file content from a specific git revision (async, atomic)
 -- revision: e.g., "HEAD", "HEAD~1", commit hash, branch name, tag
 -- git_root: absolute path to git repository root
 -- rel_path: relative path from git root (with forward slashes)
 -- callback: function(err, lines) where lines is a table of strings
-function M.get_file_at_revision_with_root(revision, git_root, rel_path, callback)
+function M.get_file_content(revision, git_root, rel_path, callback)
   local git_object = revision .. ":" .. rel_path
 
   run_git_async(
@@ -151,7 +143,6 @@ function M.get_file_at_revision_with_root(revision, git_root, rel_path, callback
     { cwd = git_root },
     function(err, output)
       if err then
-        -- Try to provide better error messages
         if err:match("does not exist") or err:match("exists on disk, but not in") then
           callback(string.format("File '%s' not found in revision '%s'", rel_path, revision), nil)
         else
@@ -160,37 +151,12 @@ function M.get_file_at_revision_with_root(revision, git_root, rel_path, callback
         return
       end
 
-      -- Split output into lines
       local lines = vim.split(output, "\n")
-
-      -- Remove last empty line if present
       if lines[#lines] == "" then
         table.remove(lines, #lines)
       end
 
       callback(nil, lines)
-    end
-  )
-end
-
--- Validate a git revision exists
-function M.validate_revision(revision, file_path, callback)
-  local git_root = M.get_git_root(file_path)
-
-  if not git_root then
-    callback("Not in a git repository")
-    return
-  end
-
-  run_git_async(
-    { "rev-parse", "--verify", revision },
-    { cwd = git_root },
-    function(err)
-      if err then
-        callback(string.format("Invalid revision '%s': %s", revision, err))
-      else
-        callback(nil)
-      end
     end
   )
 end

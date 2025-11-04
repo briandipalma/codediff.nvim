@@ -26,7 +26,9 @@ end
 -- Parse a vscodediff:// URL
 -- Returns: git_root, commit, filepath
 function M.parse_url(url)
-  local pattern = '^vscodediff:///(.-)///([^/]+)/(.+)$'
+  -- Pattern expects commit to be a SHA hash (hex chars)
+  -- Safe since we always resolve branch names to commit hashes
+  local pattern = '^vscodediff:///(.-)///([a-f0-9]+)/(.+)$'
   local git_root, commit, filepath = url:match(pattern)
   return git_root, commit, filepath
 end
@@ -52,14 +54,13 @@ function M.setup()
       end
       
       -- Set buffer options FIRST to prevent LSP attachment
-      -- LSP checks buftype when deciding whether to attach
       vim.bo[buf].buftype = 'nowrite'
-      vim.bo[buf].bufhidden = 'wipe'  -- Auto-delete when hidden
+      vim.bo[buf].bufhidden = 'wipe'
       
-      -- Get the file content from git using explicit git_root
+      -- Get the file content from git using the new async API
       local git = require('vscode-diff.git')
       
-      git.get_file_at_revision_with_root(commit, git_root, filepath, function(err, lines)
+      git.get_file_content(commit, git_root, filepath, function(err, lines)
         vim.schedule(function()
           if err then
             -- Set error message in buffer
