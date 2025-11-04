@@ -36,15 +36,15 @@ The initial implementation after commit ef54a877 used a simplified 3-step algori
 #### Step 1: Line-Level Highlights
 ```lua
 -- Apply light background to entire changed line ranges
-apply_line_highlights(bufnr, line_range, "VscodeDiffLineDelete")
-apply_line_highlights(bufnr, line_range, "VscodeDiffLineInsert")
+apply_line_highlights(bufnr, line_range, "CodeDiffLineDelete")
+apply_line_highlights(bufnr, line_range, "CodeDiffLineInsert")
 ```
 
 #### Step 2: Character-Level Highlights
 ```lua
 -- Apply dark background to specific changed text from inner changes
 -- Skips empty ranges and line-ending-only changes
-apply_char_highlight(bufnr, char_range, "VscodeDiffCharDelete", lines)
+apply_char_highlight(bufnr, char_range, "CodeDiffCharDelete", lines)
 ```
 
 #### Step 3: Filler Lines (Simple Empty Range Detection)

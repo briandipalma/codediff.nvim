@@ -25,11 +25,11 @@ This caused char-level highlights to be **invisible** because they were lighter 
 
 ```lua
 -- Line-level: Use native colors
-vim.api.nvim_set_hl(0, "VscodeDiffLineInsert", {
+vim.api.nvim_set_hl(0, "CodeDiffLineInsert", {
   link = "DiffAdd",  -- Native green
 })
 
-vim.api.nvim_set_hl(0, "VscodeDiffLineDelete", {
+vim.api.nvim_set_hl(0, "CodeDiffLineDelete", {
   link = "DiffDelete",  -- Native red
 })
 
@@ -42,7 +42,7 @@ local function darken_color(color)
 end
 
 local diff_add = vim.api.nvim_get_hl(0, {name = "DiffAdd"})
-vim.api.nvim_set_hl(0, "VscodeDiffCharInsert", {
+vim.api.nvim_set_hl(0, "CodeDiffCharInsert", {
   bg = darken_color(diff_add.bg),  -- 60% darker
 })
 ```
@@ -103,7 +103,7 @@ Char highlight:   [Dark Red]   ← VISIBLE! ✅
 ## Testing
 
 ```vim
-:VscodeDiff ../test_playground.txt ../modified_playground.txt
+:CodeDiff ../test_playground.txt ../modified_playground.txt
 ```
 
 You should now see:

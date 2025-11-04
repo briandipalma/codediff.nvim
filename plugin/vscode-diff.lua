@@ -11,7 +11,7 @@ local commands = require("vscode-diff.commands")
 render.setup_highlights()
 
 -- Register user command
-vim.api.nvim_create_user_command("VSCodeDiff", commands.vscode_diff, {
+vim.api.nvim_create_user_command("CodeDiff", commands.vscode_diff, {
   nargs = "*",
   complete = "file",
   desc = "VSCode-style diff view (files or git revision)"

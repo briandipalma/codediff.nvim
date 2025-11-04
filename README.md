@@ -98,19 +98,19 @@ Compare the current buffer with a git revision:
 
 ```vim
 " Compare with last commit
-:VSCodeDiff HEAD
+:CodeDiff HEAD
 
 " Compare with previous commit
-:VSCodeDiff HEAD~1
+:CodeDiff HEAD~1
 
 " Compare with specific commit
-:VSCodeDiff abc123
+:CodeDiff abc123
 
 " Compare with branch
-:VSCodeDiff main
+:CodeDiff main
 
 " Compare with tag
-:VSCodeDiff v1.0.0
+:CodeDiff v1.0.0
 ```
 
 **Requirements:**
@@ -129,7 +129,7 @@ Compare the current buffer with a git revision:
 Compare two files side-by-side:
 
 ```vim
-:VSCodeDiff file_a.txt file_b.txt
+:CodeDiff file_a.txt file_b.txt
 ```
 
 ### Lua API
@@ -187,15 +187,15 @@ end
 
 The plugin defines four highlight groups matching VSCode's diff colors:
 
-- `VSCodeDiffLineInsert` - Light green background for inserted lines
-- `VSCodeDiffLineDelete` - Light red background for deleted lines
-- `VSCodeDiffCharInsert` - Deep/dark green for inserted characters (THE "DEEPER COLOR")
-- `VSCodeDiffCharDelete` - Deep/dark red for deleted characters (THE "DEEPER COLOR")
+- `CodeDiffLineInsert` - Light green background for inserted lines
+- `CodeDiffLineDelete` - Light red background for deleted lines
+- `CodeDiffCharInsert` - Deep/dark green for inserted characters (THE "DEEPER COLOR")
+- `CodeDiffCharDelete` - Deep/dark red for deleted characters (THE "DEEPER COLOR")
 
 You can customize these in your config:
 
 ```lua
-vim.api.nvim_set_hl(0, "VSCodeDiffCharInsert", { bg = "#2d6d2d" })
+vim.api.nvim_set_hl(0, "CodeDiffCharInsert", { bg = "#2d6d2d" })
 ```
 
 ## Development

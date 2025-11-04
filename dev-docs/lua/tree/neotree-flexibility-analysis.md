@@ -169,7 +169,7 @@ window = {
     ["<CR>"] = function(state)
       local node = state.tree:get_node()
       -- Open in vscode-diff
-      vim.cmd("VscodeDiff " .. state.commit1)
+      vim.cmd("CodeDiff " .. state.commit1)
     end,
   }
 },

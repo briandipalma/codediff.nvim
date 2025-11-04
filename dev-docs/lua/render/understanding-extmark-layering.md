@@ -53,12 +53,12 @@ function adjust_brightness(color, 0.7)
   -- Makes colors darker and more subtle
 end
 
-vim.api.nvim_set_hl(0, "VscodeDiffLineInsert", {
+vim.api.nvim_set_hl(0, "CodeDiffLineInsert", {
   bg = adjust_brightness(diff_add.bg, 0.7)  -- Darker
 })
 
 -- Char-level: BRIGHTER (use full native color)
-vim.api.nvim_set_hl(0, "VscodeDiffCharInsert", {
+vim.api.nvim_set_hl(0, "CodeDiffCharInsert", {
   bg = diff_add.bg  -- Full brightness
 })
 ```
@@ -139,7 +139,7 @@ Result:
 ## Testing
 
 ```vim
-:VscodeDiff ../test_playground.txt ../modified_playground.txt
+:CodeDiff ../test_playground.txt ../modified_playground.txt
 ```
 
 You should now see:

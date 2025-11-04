@@ -9,7 +9,7 @@ The plugin provides built-in git integration to compare the current buffer with 
 When you have a file open that's tracked by git, you can compare it with any revision:
 
 ```vim
-:VSCodeDiff HEAD
+:CodeDiff HEAD
 ```
 
 This will:
@@ -25,27 +25,27 @@ The command supports all standard git revision formats:
 
 ```vim
 " HEAD and relatives
-:VSCodeDiff HEAD          " Last commit
-:VSCodeDiff HEAD~1        " One commit before HEAD
-:VSCodeDiff HEAD~5        " Five commits before HEAD
-:VSCodeDiff HEAD^         " First parent of HEAD
+:CodeDiff HEAD          " Last commit
+:CodeDiff HEAD~1        " One commit before HEAD
+:CodeDiff HEAD~5        " Five commits before HEAD
+:CodeDiff HEAD^         " First parent of HEAD
 
 " Commit hashes
-:VSCodeDiff abc123        " Short hash
-:VSCodeDiff abc123def456  " Full hash
+:CodeDiff abc123        " Short hash
+:CodeDiff abc123def456  " Full hash
 
 " Branches
-:VSCodeDiff main
-:VSCodeDiff develop
-:VSCodeDiff feature/my-branch
+:CodeDiff main
+:CodeDiff develop
+:CodeDiff feature/my-branch
 
 " Tags
-:VSCodeDiff v1.0.0
-:VSCodeDiff release-2024
+:CodeDiff v1.0.0
+:CodeDiff release-2024
 
 " Special refs
-:VSCodeDiff origin/main
-:VSCodeDiff @{upstream}
+:CodeDiff origin/main
+:CodeDiff @{upstream}
 ```
 
 ## Error Handling
@@ -55,7 +55,7 @@ The plugin provides clear error messages for common issues:
 ### Not in a Git Repository
 
 ```vim
-:VSCodeDiff HEAD
+:CodeDiff HEAD
 " Error: Current file is not in a git repository
 ```
 
@@ -63,14 +63,14 @@ The plugin provides clear error messages for common issues:
 
 ```vim
 " In a scratch buffer or empty buffer
-:VSCodeDiff HEAD
+:CodeDiff HEAD
 " Error: Current buffer is not a file
 ```
 
 ### File Not in Revision
 
 ```vim
-:VSCodeDiff HEAD~10
+:CodeDiff HEAD~10
 " Error: File 'path/to/file.lua' not found in revision 'HEAD~10'
 ```
 
@@ -82,7 +82,7 @@ This can happen if:
 ### Invalid Revision
 
 ```vim
-:VSCodeDiff nonexistent-branch
+:CodeDiff nonexistent-branch
 " Error: Invalid revision 'nonexistent-branch': ...
 ```
 

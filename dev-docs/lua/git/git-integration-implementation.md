@@ -23,13 +23,13 @@ A comprehensive git operations module with async support:
 - **Error handling**: Provides user-friendly error messages
 - **Compatibility**: Works on Neovim 0.7+ with different async implementations
 
-### 2. Enhanced VscodeDiff Command
+### 2. Enhanced CodeDiff Command
 
-The `:VscodeDiff` command now supports two modes:
+The `:CodeDiff` command now supports two modes:
 
 **Mode 1: Git Diff (Single Argument)**
 ```vim
-:VscodeDiff <revision>
+:CodeDiff <revision>
 ```
 - Compares current buffer with specified git revision
 - Left buffer: Git version (readonly)
@@ -39,7 +39,7 @@ The `:VscodeDiff` command now supports two modes:
 
 **Mode 2: File Diff (Two Arguments)**
 ```vim
-:VscodeDiff <file_a> <file_b>
+:CodeDiff <file_a> <file_b>
 ```
 - Original behavior: compare two files
 
@@ -109,7 +109,7 @@ vim.loop.spawn("git", {
 
 ### Command Flow
 
-1. User runs `:VscodeDiff HEAD~1`
+1. User runs `:CodeDiff HEAD~1`
 2. Plugin checks if current buffer is a file
 3. Plugin checks if file is in a git repository
 4. Plugin validates the git revision exists
@@ -147,7 +147,7 @@ Potential improvements identified:
    - Show diff even when file was renamed
 
 2. **Two Revision Comparison**
-   - Support `:VscodeDiff <rev1> <rev2>` syntax
+   - Support `:CodeDiff <rev1> <rev2>` syntax
    - Compare any two revisions
 
 3. **Staging Area**
@@ -182,19 +182,19 @@ Potential improvements identified:
 
 ```vim
 " Compare with last commit
-:VscodeDiff HEAD
+:CodeDiff HEAD
 
 " Compare with 3 commits ago
-:VscodeDiff HEAD~3
+:CodeDiff HEAD~3
 
 " Compare with a branch
-:VscodeDiff main
+:CodeDiff main
 
 " Compare with a tag
-:VscodeDiff v1.0.0
+:CodeDiff v1.0.0
 
 " Traditional file diff still works
-:VscodeDiff old.lua new.lua
+:CodeDiff old.lua new.lua
 ```
 
 ## Conclusion

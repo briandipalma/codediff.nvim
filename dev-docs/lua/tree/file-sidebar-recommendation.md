@@ -88,16 +88,16 @@ Add this to your `plugin/vscode-diff.lua`:
 
 ```lua
 -- Command to show git status list
-vim.api.nvim_create_user_command("VscodeDiffList", function()
+vim.api.nvim_create_user_command("CodeDiffList", function()
   vim.cmd("Neotree float git_status")
 end, { desc = "Show git changed files" })
 ```
 
 Users can then:
-1. Run `:VscodeDiffList` to see changed files
+1. Run `:CodeDiffList` to see changed files
 2. Navigate to desired file in Neo-tree
 3. Press Enter to edit the file
-4. Run `:VscodeDiff HEAD` to view the diff
+4. Run `:CodeDiff HEAD` to view the diff
 
 #### Option 2: Custom Keybinding Integration
 
@@ -118,7 +118,7 @@ require("neo-tree").setup({
             -- Open the file
             vim.cmd("edit " .. node.path)
             -- Open diff with HEAD
-            vim.cmd("VscodeDiff HEAD")
+            vim.cmd("CodeDiff HEAD")
           end
         end,
         
@@ -128,7 +128,7 @@ require("neo-tree").setup({
           if node and node.type == "file" then
             vim.cmd("Neotree close")
             vim.cmd("edit " .. node.path)
-            vim.cmd("VscodeDiff HEAD~1")
+            vim.cmd("CodeDiff HEAD~1")
           end
         end,
       }
@@ -163,7 +163,7 @@ This allows:
 
 **Phase 1: Start Simple**
 1. Document that users should install Neo-tree
-2. Add `:VscodeDiffList` command that opens Neo-tree git_status
+2. Add `:CodeDiffList` command that opens Neo-tree git_status
 3. Document the workflow in your README
 
 **Phase 2: Enhance (Optional)**
@@ -207,19 +207,19 @@ built-in `git_status` source.
 
 3. Navigate to a file and press Enter to edit it, then run:
    ```vim
-   :VscodeDiff HEAD
+   :CodeDiff HEAD
    ```
 
 ### Convenience Command
 
 Add this to your config for quick access:
 ```lua
-vim.api.nvim_create_user_command("VscodeDiffList", function()
+vim.api.nvim_create_user_command("CodeDiffList", function()
   vim.cmd("Neotree float git_status")
 end, {})
 ```
 
-Now you can run `:VscodeDiffList` to quickly see all changed files!
+Now you can run `:CodeDiffList` to quickly see all changed files!
 ```
 
 ## Conclusion

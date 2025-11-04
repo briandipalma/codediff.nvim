@@ -1159,12 +1159,12 @@ local diff = require("vscode-diff")
 local render = require("vscode-diff.render")
 
 -- User command to open diff
-vim.api.nvim_create_user_command("VscodeDiff", function(opts)
+vim.api.nvim_create_user_command("CodeDiff", function(opts)
   local file_a = opts.fargs[1]
   local file_b = opts.fargs[2]
   
   if not file_a or not file_b then
-    vim.notify("Usage: :VscodeDiff <file_a> <file_b>", vim.log.levels.ERROR)
+    vim.notify("Usage: :CodeDiff <file_a> <file_b>", vim.log.levels.ERROR)
     return
   end
   
@@ -1203,7 +1203,7 @@ Using [Lazy.nvim](https://github.com/folke/lazy.nvim):
 ## Usage
 
 ```vim
-:VscodeDiff file_a.txt file_b.txt
+:CodeDiff file_a.txt file_b.txt
 ```
 
 ## Development
@@ -1228,7 +1228,7 @@ nvim --headless -c "luafile tests/test_render.lua" -c "quit"  # Lua tests
 # Open nvim, run :Lazy, add the plugin
 
 # Or test locally:
-nvim -c "set rtp+=." -c "VscodeDiff tests/fixtures/file_a.txt tests/fixtures/file_b.txt"
+nvim -c "set rtp+=." -c "CodeDiff tests/fixtures/file_a.txt tests/fixtures/file_b.txt"
 ```
 
 ---
@@ -1286,7 +1286,7 @@ After completing all steps:
 - [ ] Lua tests pass (headless nvim)
 - [ ] E2E test passes
 - [ ] Plugin installs via Lazy.nvim
-- [ ] `:VscodeDiff` command works interactively
+- [ ] `:CodeDiff` command works interactively
 - [ ] Highlight colors match VSCode
 - [ ] Line alignment is correct
 - [ ] Both buffers are read-only
@@ -1322,7 +1322,7 @@ Key files to study (don't copy code, just understand logic):
 
 The MVP is complete when:
 
-1. You can run `:VscodeDiff file_a.txt file_b.txt`
+1. You can run `:CodeDiff file_a.txt file_b.txt`
 2. Two side-by-side buffers appear
 3. Line backgrounds show red/green/blue for changes
 4. Character-level highlights show within modified lines

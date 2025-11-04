@@ -51,7 +51,7 @@ function M.vscode_diff(opts)
   local args = opts.fargs
 
   if #args == 0 then
-    vim.notify("Usage: :VSCodeDiff <file_a> <file_b> OR :VSCodeDiff <revision>", vim.log.levels.ERROR)
+    vim.notify("Usage: :CodeDiff <file_a> <file_b> OR :CodeDiff <revision>", vim.log.levels.ERROR)
     return
   end
 
@@ -60,7 +60,7 @@ function M.vscode_diff(opts)
   elseif #args == 2 then
     handle_file_diff(args[1], args[2])
   else
-    vim.notify("Usage: :VSCodeDiff <file_a> <file_b> OR :VSCodeDiff <revision>", vim.log.levels.ERROR)
+    vim.notify("Usage: :CodeDiff <file_a> <file_b> OR :CodeDiff <revision>", vim.log.levels.ERROR)
   end
 end
 
