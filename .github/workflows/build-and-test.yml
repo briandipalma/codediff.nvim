@@ -105,7 +105,6 @@ jobs:
 
       - name: Run C unit tests (Windows)
         if: startsWith(matrix.runs-on, 'windows')
-        shell: pwsh
         run: |
           cmake -B build
           cmake --build build --config Release
