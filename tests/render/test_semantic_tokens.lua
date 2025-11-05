@@ -195,9 +195,9 @@ end)
 test("Virtual file URL creation and parsing", function()
   local virtual_file = require("vscode-diff.virtual_file")
   
-  -- Test URL creation
+  -- Test URL creation with actual hex commit hash
   local git_root = "/home/user/project"
-  local commit = "HEAD"
+  local commit = "abc123def456"  -- Use hex commit hash instead of "HEAD"
   local filepath = "src/file.lua"
   
   local url = virtual_file.create_url(git_root, commit, filepath)

@@ -45,9 +45,10 @@ jobs:
 
       - name: Install Neovim (Windows)
         if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
           choco install neovim --pre -y
-          refreshenv
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           nvim --version | Select-Object -First 1
 
       - name: Build library (Ubuntu/macOS)
