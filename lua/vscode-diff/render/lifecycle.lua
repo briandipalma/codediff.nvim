@@ -279,8 +279,10 @@ function M.register(tabpage, left_bufnr, right_bufnr, left_win, right_win, origi
   end
   
   -- Setup TabLeave autocmd to suspend when leaving this tab
+  local tab_augroup = vim.api.nvim_create_augroup('vscode_diff_lifecycle_tab_' .. tabpage, { clear = true })
+  
   vim.api.nvim_create_autocmd('TabLeave', {
-    group = augroup,
+    group = tab_augroup,
     callback = function()
       local current_tab = vim.api.nvim_get_current_tabpage()
       if current_tab == tabpage then
@@ -291,7 +293,7 @@ function M.register(tabpage, left_bufnr, right_bufnr, left_win, right_win, origi
   
   -- Setup TabEnter autocmd to resume when entering this tab
   vim.api.nvim_create_autocmd('TabEnter', {
-    group = augroup,
+    group = tab_augroup,
     callback = function()
       -- TabEnter fires when entering ANY tab, we need to check if it's our diff tab
       vim.schedule(function()
@@ -370,6 +372,9 @@ local function cleanup_diff(tabpage)
   if vim.api.nvim_win_is_valid(diff.right_win) then
     vim.w[diff.right_win].vscode_diff_restore = nil
   end
+  
+  -- Clear tab-specific autocmd group
+  pcall(vim.api.nvim_del_augroup_by_name, 'vscode_diff_lifecycle_tab_' .. tabpage)
   
   -- Remove from tracking
   active_diffs[tabpage] = nil

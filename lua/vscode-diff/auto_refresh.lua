@@ -9,7 +9,7 @@ local core = require("vscode-diff.render.core")
 local THROTTLE_DELAY_MS = 200
 
 -- Track active auto-refresh sessions
--- Structure: { bufnr = { timer, left_bufnr, right_bufnr, original_lines, modified_lines } }
+-- Structure: { bufnr = { timer, left_bufnr, right_bufnr } }
 local active_sessions = {}
 
 -- Cancel pending timer for a buffer
