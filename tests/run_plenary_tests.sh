@@ -29,6 +29,7 @@ SPEC_FILES=(
   "tests/git_integration_spec.lua"
   "tests/autoscroll_spec.lua"
   "tests/render/semantic_tokens_spec.lua"
+  "tests/integration_diagnostics_spec.lua"
 )
 
 for spec_file in "${SPEC_FILES[@]}"; do

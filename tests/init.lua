@@ -20,5 +20,8 @@ if vim.fn.isdirectory(plenary_dir) == 0 then
 end
 vim.opt.rtp:prepend(plenary_dir)
 
+-- Load plugin files (for integration tests that need commands)
+vim.cmd('runtime! plugin/*.lua plugin/*.vim')
+
 -- Setup plugin
 require("vscode-diff").setup()
