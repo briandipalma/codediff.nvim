@@ -23,9 +23,16 @@ describe("Virtual buffer diagnostics integration", function()
     
     vim.cmd('edit ' .. test_file)
     
-    -- Run CodeDiff with a previous revision
+    -- Try to find a valid revision - use HEAD first, or HEAD~1 if possible
+    local revision = "HEAD"
+    local commit_count = vim.fn.systemlist("git rev-list --count HEAD")[1]
+    if vim.v.shell_error == 0 and tonumber(commit_count) > 1 then
+      revision = "HEAD~1"
+    end
+    
+    -- Run CodeDiff with a valid revision
     local ok, err = pcall(function()
-      vim.cmd('CodeDiff HEAD~5')
+      vim.cmd('CodeDiff ' .. revision)
     end)
     
     if not ok then
