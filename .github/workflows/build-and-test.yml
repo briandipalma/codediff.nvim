@@ -114,15 +114,15 @@ jobs:
       - name: Run Neovim tests (Ubuntu/macOS)
         if: startsWith(matrix.runs-on, 'ubuntu') || startsWith(matrix.runs-on, 'macos')
         run: |
-          chmod +x tests/run_tests.sh
-          tests/run_tests.sh
+          chmod +x tests/run_plenary_tests.sh
+          tests/run_plenary_tests.sh
 
       - name: Run Neovim tests (Windows)
         if: startsWith(matrix.runs-on, 'windows')
         shell: bash
         run: |
           export PATH="/c/tools/neovim/nvim-win64/bin:$PATH"
-          tests/run_tests.sh
+          tests/run_plenary_tests.sh
 
       - name: Upload build artifacts
         if: success()
