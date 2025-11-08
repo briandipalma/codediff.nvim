@@ -1,8 +1,6 @@
 CompileFlags:
   Add:
-    - -Ilibvscode-diff/include
-    - -Ilibvscode-diff/vendor
-    - -DUTF8PROC_STATIC
     - -DUSE_OPENMP
     - -fopenmp
+    - -I/usr/lib/gcc/aarch64-linux-gnu/15/include
   CompilationDatabase: build
