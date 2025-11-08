@@ -394,8 +394,14 @@ LinesDiff* compute_diff(
     
 #ifdef USE_OPENMP
     // Parallel character refinement (OpenMP)
+    // Set default thread count if not explicitly configured by user
+    if (getenv("OMP_NUM_THREADS") == NULL) {
+        int num_procs = omp_get_num_procs();
+        omp_set_num_threads(num_procs > 4 ? 4 : num_procs);
+    }
+    
     // Only parallelize if we have enough diffs to justify thread overhead
-    const int MIN_DIFFS_FOR_PARALLEL = 4;
+    const int MIN_DIFFS_FOR_PARALLEL = 1;
     int use_parallel = line_alignments->count >= MIN_DIFFS_FOR_PARALLEL;
     
     if (use_parallel) {
