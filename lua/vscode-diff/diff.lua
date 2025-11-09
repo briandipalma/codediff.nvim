@@ -4,9 +4,9 @@
 local M = {}
 local ffi = require("ffi")
 
--- Get VERSION from init.lua (single source of truth)
-local vscode_diff = require("vscode-diff")
-local VERSION = vscode_diff.VERSION
+-- Get VERSION from version.lua (single source of truth)
+local version = require("vscode-diff.version")
+local VERSION = version.VERSION
 
 -- Load the C library with automatic installation
 local lib_ext

@@ -54,10 +54,10 @@ local function get_lib_filename(version)
   return string.format("libvscode_diff_%s.%s", version, get_lib_ext())
 end
 
--- Get the current VERSION from init.lua (single source of truth)
+-- Get the current VERSION from version.lua (single source of truth)
 local function get_current_version()
-  local vscode_diff = require("vscode-diff")
-  return vscode_diff.VERSION
+  local version = require("vscode-diff.version")
+  return version.VERSION
 end
 
 -- Get installed library version by checking existing versioned files
