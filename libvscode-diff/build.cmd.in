@@ -15,7 +15,6 @@ echo Platform: Windows
 REM Source files (including bundled utf8proc)
 set SOURCES=^
 src\diff_api.c ^
-src\render_plan.c ^
 default_lines_diff_computer.c ^
 src\char_level.c ^
 src\line_level.c ^
