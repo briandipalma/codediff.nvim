@@ -73,14 +73,17 @@ describe("Full Integration Suite", function()
   end)
 
   after_each(function()
+    -- Reset tabs first to close windows/buffers that might be using the dir
+    vim.cmd("tabnew")
+    vim.cmd("tabonly")
+    
+    -- Give a small grace period for async tasks/handles to close
+    vim.wait(100)
+
     -- Clean up
     if temp_dir and vim.fn.isdirectory(temp_dir) == 1 then
       vim.fn.delete(temp_dir, "rf")
     end
-    
-    -- Reset tabs
-    vim.cmd("tabnew")
-    vim.cmd("tabonly")
   end)
 
   -- Helper to verify explorer opened

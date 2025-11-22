@@ -565,10 +565,12 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
     local existing = vim.fn.bufnr(original_info.target)
     if existing ~= -1 and existing == old_modified_buf then
       -- Replace modified window with empty buffer first
-      vim.api.nvim_set_current_win(modified_win)
-      vim.cmd("enew")
-      table.insert(buffers_to_delete, old_modified_buf)
-      old_modified_buf = vim.api.nvim_get_current_buf()  -- Update to new empty buffer
+      if vim.api.nvim_win_is_valid(modified_win) then
+        vim.api.nvim_set_current_win(modified_win)
+        vim.cmd("enew")
+        table.insert(buffers_to_delete, old_modified_buf)
+        old_modified_buf = vim.api.nvim_get_current_buf()  -- Update to new empty buffer
+      end
     end
   end
   
@@ -577,32 +579,38 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
     local existing = vim.fn.bufnr(modified_info.target)
     if existing ~= -1 and existing == old_original_buf then
       -- Replace original window with empty buffer first
-      vim.api.nvim_set_current_win(original_win)
-      vim.cmd("enew")
-      table.insert(buffers_to_delete, old_original_buf)
-      old_original_buf = vim.api.nvim_get_current_buf()  -- Update to new empty buffer
+      if vim.api.nvim_win_is_valid(original_win) then
+        vim.api.nvim_set_current_win(original_win)
+        vim.cmd("enew")
+        table.insert(buffers_to_delete, old_original_buf)
+        old_original_buf = vim.api.nvim_get_current_buf()  -- Update to new empty buffer
+      end
     end
   end
 
   -- Now load buffers - :edit will create fresh buffers since we replaced conflicting ones
-  vim.api.nvim_set_current_win(original_win)
-  if original_info.needs_edit then
-    -- Force reload for virtual files to ensure fresh content (fixes stale :0 index)
-    local cmd = original_is_virtual and "edit! " or "edit "
-    vim.cmd(cmd .. vim.fn.fnameescape(original_info.target))
-    original_info.bufnr = vim.api.nvim_get_current_buf()
-  else
-    vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+  if vim.api.nvim_win_is_valid(original_win) then
+    vim.api.nvim_set_current_win(original_win)
+    if original_info.needs_edit then
+      -- Force reload for virtual files to ensure fresh content (fixes stale :0 index)
+      local cmd = original_is_virtual and "edit! " or "edit "
+      vim.cmd(cmd .. vim.fn.fnameescape(original_info.target))
+      original_info.bufnr = vim.api.nvim_get_current_buf()
+    else
+      vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+    end
   end
 
-  vim.api.nvim_set_current_win(modified_win)
-  if modified_info.needs_edit then
-    -- Force reload for virtual files to ensure fresh content
-    local cmd = modified_is_virtual and "edit! " or "edit "
-    vim.cmd(cmd .. vim.fn.fnameescape(modified_info.target))
-    modified_info.bufnr = vim.api.nvim_get_current_buf()
-  else
-    vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+  if vim.api.nvim_win_is_valid(modified_win) then
+    vim.api.nvim_set_current_win(modified_win)
+    if modified_info.needs_edit then
+      -- Force reload for virtual files to ensure fresh content
+      local cmd = modified_is_virtual and "edit! " or "edit "
+      vim.cmd(cmd .. vim.fn.fnameescape(modified_info.target))
+      modified_info.bufnr = vim.api.nvim_get_current_buf()
+    else
+      vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+    end
   end
   
   -- Delete the old buffers we replaced (after windows have new content)
