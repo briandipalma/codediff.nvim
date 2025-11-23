@@ -14,7 +14,9 @@ M.defaults = {
     char_delete = nil,  -- Character-level deletions (if nil, derived from line_delete with char_brightness)
 
     -- Brightness multiplier for character-level highlights (only used if char_insert/char_delete are nil)
-    char_brightness = 1.4,  -- Multiplier for character backgrounds (1.4 = 140% = brighter)
+    -- nil = auto-detect based on background (1.4 for dark, 0.92 for light)
+    -- Set explicit value to override: char_brightness = 1.2
+    char_brightness = nil,
   },
 
   -- Diff view behavior

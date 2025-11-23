@@ -75,13 +75,16 @@ function M.setup()
   -- Character-level highlights: use explicit values if provided, otherwise derive from line highlights
   local char_insert_bg
   local char_delete_bg
+  
+  -- Auto-detect brightness based on background if not explicitly set
+  local brightness = opts.char_brightness or (vim.o.background == "light" and 0.92 or 1.4)
 
   if opts.char_insert then
     -- Explicit char_insert provided - use it directly
     char_insert_bg = resolve_color(opts.char_insert, 0x2a4556).bg
   else
     -- Derive from line_insert with brightness adjustment
-    char_insert_bg = adjust_brightness(line_insert_color.bg, opts.char_brightness) or 0x2a4556
+    char_insert_bg = adjust_brightness(line_insert_color.bg, brightness) or 0x2a4556
   end
 
   if opts.char_delete then
@@ -89,7 +92,7 @@ function M.setup()
     char_delete_bg = resolve_color(opts.char_delete, 0x4b2a3d).bg
   else
     -- Derive from line_delete with brightness adjustment
-    char_delete_bg = adjust_brightness(line_delete_color.bg, opts.char_brightness) or 0x4b2a3d
+    char_delete_bg = adjust_brightness(line_delete_color.bg, brightness) or 0x4b2a3d
   end
 
   vim.api.nvim_set_hl(0, "CodeDiffCharInsert", {

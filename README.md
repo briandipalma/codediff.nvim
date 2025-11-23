@@ -34,7 +34,7 @@ A Neovim plugin that provides VSCode-style side-by-side diff rendering with two-
 }
 ```
 
-> **Note:** The plugin uses your colorscheme's `DiffAdd` and `DiffDelete` for line-level diffs, and auto-brightens them for character-level highlights (assumes dark colorscheme). For light colorschemes, adjust `char_brightness < 1.0`. See [Highlight Groups](#highlight-groups) for details.
+> **Note:** The plugin automatically adapts to your colorscheme's background (dark/light). It uses `DiffAdd` and `DiffDelete` for line-level diffs, and auto-adjusts brightness for character-level highlights (1.4x brighter for dark themes, 0.92x darker for light themes). See [Highlight Groups](#highlight-groups) for customization.
 
 **With custom configuration:**
 ```lua
@@ -55,7 +55,8 @@ A Neovim plugin that provides VSCode-style side-by-side diff rendering with two-
         char_delete = nil,            -- Character-level deletions (nil = auto-derive)
         
         -- Brightness multiplier (only used when char_insert/char_delete are nil)
-        char_brightness = 1.4,        -- Make character highlights 40% brighter
+        -- nil = auto-detect based on background (1.4 for dark, 0.92 for light)
+        char_brightness = nil,        -- Auto-adjust based on your colorscheme
       },
       
       -- Diff view behavior
@@ -303,9 +304,11 @@ The plugin defines highlight groups matching VSCode's diff colors:
 
 **Default behavior:**
 - Uses your colorscheme's `DiffAdd` and `DiffDelete` for line-level highlights
-- Character-level highlights are derived by multiplying brightness by `char_brightness` (default: `1.4`)
-- **Dark colorschemes**: Use `char_brightness > 1.0` to make character highlights brighter (default `1.4` = 40% brighter)
-- **Light colorschemes**: Use `char_brightness < 1.0` to make character highlights darker (e.g., `0.7` = 30% darker)
+- Character-level highlights are auto-adjusted based on `vim.o.background`:
+  - **Dark themes** (`background = "dark"`): Brightness multiplied by `1.4` (40% brighter)
+  - **Light themes** (`background = "light"`): Brightness multiplied by `0.92` (8% darker)
+- This auto-detection works out-of-box for most colorschemes
+- You can override with explicit `char_brightness` value if needed
 
 **Customization examples:**
 
@@ -314,7 +317,7 @@ The plugin defines highlight groups matching VSCode's diff colors:
 highlights = {
   line_insert = "#1d3042",
   line_delete = "#351d2b",
-  char_brightness = 1.5,
+  char_brightness = 1.5,  -- Override auto-detection with explicit value
 }
 
 -- Override character colors explicitly
@@ -403,7 +406,6 @@ vscode-diff.nvim/
 
 - [ ] Inline diff mode (single buffer view)
 - [ ] Fold support for large diffs
-- [ ] Performance optimization for very large files (10,000+ lines)
 
 ## VSCode Reference
 
