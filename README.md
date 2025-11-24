@@ -317,15 +317,13 @@ The plugin defines highlight groups matching VSCode's diff colors:
 
 ![Dawnfox Light theme with default auto color selection](https://github.com/user-attachments/assets/760fa8be-dba7-4eb5-b71b-c53fb3aa6edf)
 
-<!-- Add more theme examples below:
+**Catppuccin Mocha** - Default configuration with auto-detected brightness (`char_brightness = 1.4` for dark themes):
 
-**[Theme Name]** - Description of configuration used:
+![Catppuccin Mocha theme with default auto color selection](https://github.com/user-attachments/assets/0187ff6c-9a2b-45dc-b9be-c15fd2a796d9)
 
-![Alt text](image-url)
+**Kanagawa Lotus** - Default configuration with auto-detected brightness (`char_brightness = 0.92` for light themes):
 
--->
-<img width="1920" height="1440" alt="352_1x_shots_so" src="https://github.com/user-attachments/assets/0187ff6c-9a2b-45dc-b9be-c15fd2a796d9" />
-<img width="1920" height="1440" alt="964_1x_shots_so" src="https://github.com/user-attachments/assets/9e4a0e1c-0ebf-47c8-a8b5-f8a0966c5592" />
+![Kanagawa Lotus theme with default auto color selection](https://github.com/user-attachments/assets/9e4a0e1c-0ebf-47c8-a8b5-f8a0966c5592)
 
 </details>
 
