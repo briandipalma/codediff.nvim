@@ -324,6 +324,8 @@ The plugin defines highlight groups matching VSCode's diff colors:
 ![Alt text](image-url)
 
 -->
+<img width="1920" height="1440" alt="352_1x_shots_so" src="https://github.com/user-attachments/assets/0187ff6c-9a2b-45dc-b9be-c15fd2a796d9" />
+<img width="1920" height="1440" alt="964_1x_shots_so" src="https://github.com/user-attachments/assets/9e4a0e1c-0ebf-47c8-a8b5-f8a0966c5592" />
 
 </details>
 
