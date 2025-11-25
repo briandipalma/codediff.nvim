@@ -137,70 +137,35 @@ vim.opt.rtp:append("~/.local/share/nvim/vscode-diff.nvim")
 
 3. **Install the C library:**
 
-The plugin requires a C library binary in the plugin root directory. The binary must be named one of:
-- `libvscode_diff.so` (Linux/BSD)
-- `libvscode_diff.dylib` (macOS)
-- `libvscode_diff.dll` (Windows)
+The plugin requires a C library binary in the plugin root directory. The plugin auto-detects these filenames:
+- `libvscode_diff.so` or `libvscode_diff_<version>.so` (Linux/BSD)
+- `libvscode_diff.dylib` or `libvscode_diff_<version>.dylib` (macOS)
+- `libvscode_diff.dll` or `libvscode_diff_<version>.dll` (Windows)
 
-**Option A: Download pre-built binary** (recommended)
+**Option A: Download from GitHub releases** (recommended)
 
-Download the appropriate binary for your platform from the [GitHub releases page](https://github.com/esmuellert/vscode-diff.nvim/releases) and place it in the plugin root:
-
-```bash
-# Linux/BSD example
-cd ~/.local/share/nvim/vscode-diff.nvim
-curl -L -o libvscode_diff.so https://github.com/esmuellert/vscode-diff.nvim/releases/download/v1.0.0/libvscode_diff.so
-
-# macOS example  
-cd ~/.local/share/nvim/vscode-diff.nvim
-curl -L -o libvscode_diff.dylib https://github.com/esmuellert/vscode-diff.nvim/releases/download/v1.0.0/libvscode_diff.dylib
-
-# Windows example (PowerShell)
-cd $env:LOCALAPPDATA\nvim-data\site\pack\manual\start\vscode-diff.nvim
-Invoke-WebRequest -Uri https://github.com/esmuellert/vscode-diff.nvim/releases/download/v1.0.0/libvscode_diff.dll -OutFile libvscode_diff.dll
-```
+Download the appropriate binary for your platform from the [GitHub releases page](https://github.com/esmuellert/vscode-diff.nvim/releases) and place it in the plugin root directory.
 
 **Option B: Build from source**
 
-Build requirements:
-- **Option 1 (build.sh/build.cmd)**: C compiler (GCC/Clang/MSVC/MinGW) - auto-detected
-- **Option 2 (CMake)**: CMake 3.15+ and C compiler
+Build requirements: C compiler (GCC/Clang/MSVC/MinGW) or CMake 3.15+
 
-**Using ready-to-use build scripts** (no CMake required):
-
-Linux/macOS/BSD:
+Using build scripts (no CMake required):
 ```bash
-cd ~/.local/share/nvim/vscode-diff.nvim
+# Linux/macOS/BSD
 ./build.sh
-```
 
-Windows:
-```cmd
-cd %LOCALAPPDATA%\nvim-data\site\pack\manual\start\vscode-diff.nvim
+# Windows
 build.cmd
 ```
 
-The build script will automatically place the compiled library (`libvscode_diff.so`/`libvscode_diff.dylib`/`libvscode_diff.dll`) in the plugin root directory.
-
-**Using CMake** (for advanced users):
-
+Or using CMake:
 ```bash
-cd ~/.local/share/nvim/vscode-diff.nvim
 cmake -B build
 cmake --build build
 ```
 
-After CMake build, copy the library to plugin root:
-```bash
-# Linux/BSD
-cp build/libvscode_diff.so .
-
-# macOS
-cp build/libvscode_diff.dylib .
-
-# Windows (PowerShell)
-Copy-Item build\Release\libvscode_diff.dll .
-```
+Both methods automatically place the library in the plugin root directory.
 
 ## Usage
 
