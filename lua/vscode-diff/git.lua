@@ -171,7 +171,14 @@ end
 -- Get git root directory for the given file (async)
 -- callback: function(err, git_root)
 function M.get_git_root(file_path, callback)
-  local dir = vim.fn.fnamemodify(file_path, ":h")
+  -- Handle both file paths and directory paths
+  local dir
+  if vim.fn.isdirectory(file_path) == 1 then
+    dir = file_path
+  else
+    dir = vim.fn.fnamemodify(file_path, ":h")
+  end
+
   -- Normalize path separators for consistency
   dir = dir:gsub("\\", "/")
 
