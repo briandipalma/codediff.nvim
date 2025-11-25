@@ -123,27 +123,50 @@ The installer reads the `VERSION` file to download the matching library version 
 
 ### Manual Installation
 
-1. Clone the repository:
+If you prefer to install manually without a plugin manager:
+
+1. **Clone the repository:**
 ```bash
 git clone https://github.com/esmuellert/vscode-diff.nvim ~/.local/share/nvim/vscode-diff.nvim
 ```
 
-2. Add to your Neovim runtime path in `init.lua`:
+2. **Add to your Neovim runtime path in `init.lua`:**
 ```lua
 vim.opt.rtp:append("~/.local/share/nvim/vscode-diff.nvim")
 ```
 
-The C library will be downloaded automatically on first use.
+3. **Install the C library:**
 
-### Building from Source (Optional)
+The plugin requires a C library binary in the plugin root directory. The binary must be named one of:
+- `libvscode_diff.so` (Linux/BSD)
+- `libvscode_diff.dylib` (macOS)
+- `libvscode_diff.dll` (Windows)
 
-If you prefer to build the C library yourself instead of using pre-built binaries:
+**Option A: Download pre-built binary** (recommended)
 
-**Build requirements:**
+Download the appropriate binary for your platform from the [GitHub releases page](https://github.com/esmuellert/vscode-diff.nvim/releases) and place it in the plugin root:
+
+```bash
+# Linux/BSD example
+cd ~/.local/share/nvim/vscode-diff.nvim
+curl -L -o libvscode_diff.so https://github.com/esmuellert/vscode-diff.nvim/releases/download/v1.0.0/libvscode_diff.so
+
+# macOS example  
+cd ~/.local/share/nvim/vscode-diff.nvim
+curl -L -o libvscode_diff.dylib https://github.com/esmuellert/vscode-diff.nvim/releases/download/v1.0.0/libvscode_diff.dylib
+
+# Windows example (PowerShell)
+cd $env:LOCALAPPDATA\nvim-data\site\pack\manual\start\vscode-diff.nvim
+Invoke-WebRequest -Uri https://github.com/esmuellert/vscode-diff.nvim/releases/download/v1.0.0/libvscode_diff.dll -OutFile libvscode_diff.dll
+```
+
+**Option B: Build from source**
+
+Build requirements:
 - **Option 1 (build.sh/build.cmd)**: C compiler (GCC/Clang/MSVC/MinGW) - auto-detected
 - **Option 2 (CMake)**: CMake 3.15+ and C compiler
 
-**Option 1: Ready-to-use build scripts (no CMake required)**
+**Using ready-to-use build scripts** (no CMake required):
 
 Linux/macOS/BSD:
 ```bash
@@ -153,16 +176,30 @@ cd ~/.local/share/nvim/vscode-diff.nvim
 
 Windows:
 ```cmd
-cd %LOCALAPPDATA%\nvim-data\lazy\vscode-diff.nvim
+cd %LOCALAPPDATA%\nvim-data\site\pack\manual\start\vscode-diff.nvim
 build.cmd
 ```
 
-**Option 2: CMake (for advanced users)**
+The build script will automatically place the compiled library (`libvscode_diff.so`/`libvscode_diff.dylib`/`libvscode_diff.dll`) in the plugin root directory.
 
-All platforms:
+**Using CMake** (for advanced users):
+
 ```bash
+cd ~/.local/share/nvim/vscode-diff.nvim
 cmake -B build
 cmake --build build
+```
+
+After CMake build, copy the library to plugin root:
+```bash
+# Linux/BSD
+cp build/libvscode_diff.so .
+
+# macOS
+cp build/libvscode_diff.dylib .
+
+# Windows (PowerShell)
+Copy-Item build\Release\libvscode_diff.dll .
 ```
 
 ## Usage
