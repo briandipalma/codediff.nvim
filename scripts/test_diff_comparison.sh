@@ -24,6 +24,8 @@ TESTS_PER_FILE=30
 BASE_REF="origin/main"
 # Verbosity level: 0=quiet, 1=normal, 2=verbose
 VERBOSITY=1
+# Sort mode: frequency (default) or size
+SORT_MODE="frequency"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -36,6 +38,10 @@ while [[ $# -gt 0 ]]; do
             VERBOSITY=2
             shift
             ;;
+        -s|--size)
+            SORT_MODE="size"
+            shift
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS] [REPO_PATH]"
             echo ""
@@ -44,6 +50,7 @@ while [[ $# -gt 0 ]]; do
             echo "                   Perfect for comparing test runs"
             echo "  (no options)     Normal mode: show progress and summary"
             echo "  -v, --verbose    Verbose mode: show all details and performance"
+            echo "  -s, --size       Sort files by size (default: sort by revision frequency)"
             echo "  -h, --help       Show this help message"
             echo ""
             echo "Arguments:"
@@ -120,45 +127,18 @@ if [ ! -f "$NODE_DIFF" ]; then
     fi
 fi
 
-# Function to generate example files for top N most revised files
+# Function to generate example files for given file list
 generate_example_files() {
-    local num_files=$1
+    shift  # Remove first argument (num_files - kept for backward compatibility)
+    local files=("$@")
+    
     if [ $VERBOSITY -ge 2 ]; then
-        echo "Generating example files for top $num_files most revised files from $BASE_REF..."
+        echo "Generating example files for ${#files[@]} selected files from $BASE_REF..."
     fi
     
     # Create example directory
     mkdir -p "$EXAMPLE_DIR"
-    
-    # Get all files that exist in BASE_REF
-    if [ $VERBOSITY -ge 2 ]; then
-        echo "Counting revisions for files in $BASE_REF (this may take a moment)..."
-    fi
-    
-    # Create temporary file to store file:revision pairs
-    local temp_file=$(mktemp)
-    
-    git -C "$TARGET_REPO_ROOT" ls-tree -r --name-only "$BASE_REF" | while read file; do
-        local revisions=$(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --follow --oneline -- "$file" 2>/dev/null | wc -l)
-        if [ $revisions -gt 0 ]; then
-            echo "$revisions $file" >> "$temp_file"
-        fi
-    done
-    
-    # Sort by revision count and take top N
-    local files=($(sort -rn "$temp_file" | head -$num_files | awk '{print $2}'))
-    rm -f "$temp_file"
-    
-    if [ $VERBOSITY -ge 2 ]; then
-        echo ""
-        echo "Top $num_files most revised files (as of $BASE_REF, with rename tracking):"
-        for i in "${!files[@]}"; do
-            local file="${files[$i]}"
-            local revisions=$(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --follow --oneline -- "$file" 2>/dev/null | wc -l)
-            echo "  $((i+1)). $file ($revisions revisions)"
-        done
-        echo ""
-    fi
+
     
     # For each top file, save all its git history versions up to BASE_REF
     for file in "${files[@]}"; do
@@ -258,15 +238,29 @@ generate_example_files() {
     fi
 }
 
-# Get top N most revised files from git history up to BASE_REF
+# Get top N files from git history up to BASE_REF
 if [ $VERBOSITY -ge 1 ]; then
     echo "Testing repository: $TARGET_REPO_ROOT"
-    echo "Finding top $NUM_TOP_FILES most revised files from git history (up to $BASE_REF)..."
+    if [ "$SORT_MODE" = "size" ]; then
+        echo "Finding top $NUM_TOP_FILES largest files (up to $BASE_REF)..."
+    else
+        echo "Finding top $NUM_TOP_FILES most revised files from git history (up to $BASE_REF)..."
+    fi
 fi
-# Note: Can't use --follow here as it requires a single pathspec
-# We'll use --follow when counting individual file revisions
-TOP_FILES=($(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --pretty=format: --name-only | \
-    grep -v '^$' | sort | uniq -c | sort -rn | head -$NUM_TOP_FILES | awk '{print $2}'))
+
+if [ "$SORT_MODE" = "size" ]; then
+    # Sort by file size - get all files at BASE_REF and sort by size
+    # Format: mode type hash size path/to/file
+    # We need everything from field 5 onwards (the full path)
+    TOP_FILES=($(git -C "$TARGET_REPO_ROOT" ls-tree -r -l "$BASE_REF" | \
+        sort -k4 -rn | head -$NUM_TOP_FILES | awk '{for(i=5;i<=NF;i++) printf "%s%s", $i, (i<NF?" ":"\n")}'))
+else
+    # Sort by revision frequency (default)
+    # Note: Can't use --follow here as it requires a single pathspec
+    # We'll use --follow when counting individual file revisions
+    TOP_FILES=($(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --pretty=format: --name-only | \
+        grep -v '^$' | sort | uniq -c | sort -rn | head -$NUM_TOP_FILES | awk '{print $2}'))
+fi
 
 # Check if we need to regenerate example files
 NEED_REGENERATE=false
@@ -283,19 +277,30 @@ if [ "$NEED_REGENERATE" = true ]; then
     if [ $VERBOSITY -ge 1 ]; then
         echo "Example files missing or incomplete. Regenerating..."
     fi
-    generate_example_files $NUM_TOP_FILES
+    generate_example_files $NUM_TOP_FILES "${TOP_FILES[@]}"
     if [ $VERBOSITY -ge 1 ]; then
         echo ""
     fi
 fi
 
 if [ $VERBOSITY -ge 2 ]; then
-    echo "Top revised files (as of $BASE_REF, with rename tracking):"
-    for i in "${!TOP_FILES[@]}"; do
-        # Use --follow to track renames for each individual file
-        REVISIONS=$(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --follow --oneline -- "${TOP_FILES[$i]}" | wc -l)
-        echo "  $((i+1)). ${TOP_FILES[$i]} ($REVISIONS revisions)"
-    done
+    if [ "$SORT_MODE" = "size" ]; then
+        echo "Top files by size (as of $BASE_REF):"
+        for i in "${!TOP_FILES[@]}"; do
+            # Get file size in bytes
+            SIZE_BYTES=$(git -C "$TARGET_REPO_ROOT" cat-file -s "$BASE_REF:${TOP_FILES[$i]}" 2>/dev/null || echo "0")
+            SIZE_KB=$(awk "BEGIN {printf \"%.1f\", $SIZE_BYTES/1024}")
+            LINES=$(git -C "$TARGET_REPO_ROOT" show "$BASE_REF:${TOP_FILES[$i]}" 2>/dev/null | wc -l || echo "0")
+            echo "  $((i+1)). ${TOP_FILES[$i]} (${SIZE_KB}KB, ${LINES} lines)"
+        done
+    else
+        echo "Top revised files (as of $BASE_REF, with rename tracking):"
+        for i in "${!TOP_FILES[@]}"; do
+            # Use --follow to track renames for each individual file
+            REVISIONS=$(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --follow --oneline -- "${TOP_FILES[$i]}" | wc -l)
+            echo "  $((i+1)). ${TOP_FILES[$i]} ($REVISIONS revisions)"
+        done
+    fi
     echo ""
 fi
 
