@@ -8,9 +8,15 @@ cd /d "%~dp0\libvscode-diff"
 
 REM Create build directory
 if not exist build mkdir build
+if not exist build\include mkdir build\include
+
+REM Generate version.h from VERSION file
+set /p VERSION=<..\VERSION
+powershell -Command "(Get-Content include\version.h.in) -replace '1.0.0', '!VERSION!' | Set-Content build\include\version.h"
 
 echo Building vscode_diff (standalone mode)...
 echo Platform: Windows
+echo Version: !VERSION!
 
 REM Source files (including bundled utf8proc)
 set SOURCES=^
@@ -55,19 +61,19 @@ exit /b 1
 
 :build_msvc
 echo Using MSVC compiler...
-cl.exe /LD /O2 /W3 /std:c11 /DUTF8PROC_STATIC /DBUILDING_DLL /Iinclude /Ivendor /Fobuild\ /Fdbuild\ /Fe:build\libvscode_diff.dll %SOURCES% /link /DLL /DEF:libvscode_diff.def
+cl.exe /LD /O2 /W3 /std:c11 /DUTF8PROC_STATIC /DBUILDING_DLL /Iinclude /Ibuild\include /Ivendor /Fobuild\ /Fdbuild\ /Fe:build\libvscode_diff.dll %SOURCES% /link /DLL /DEF:libvscode_diff.def
 goto :build_done
 
 :build_clang
 echo Using Clang compiler...
 if not exist build mkdir build
-clang.exe -shared -Wall -Wextra -std=c11 -O2 -DUTF8PROC_STATIC -Iinclude -Ivendor -o build\libvscode_diff.dll %SOURCES%
+clang.exe -shared -Wall -Wextra -std=c11 -O2 -DUTF8PROC_STATIC -Iinclude -Ibuild\include -Ivendor -o build\libvscode_diff.dll %SOURCES%
 goto :build_done
 
 :build_gcc
 echo Using MinGW GCC compiler...
 if not exist build mkdir build
-gcc.exe -shared -Wall -Wextra -std=c11 -O2 -DUTF8PROC_STATIC -Iinclude -Ivendor -o build\libvscode_diff.dll %SOURCES%
+gcc.exe -shared -Wall -Wextra -std=c11 -O2 -DUTF8PROC_STATIC -Iinclude -Ibuild\include -Ivendor -o build\libvscode_diff.dll %SOURCES%
 goto :build_done
 
 :build_done
