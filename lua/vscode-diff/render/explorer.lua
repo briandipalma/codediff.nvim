@@ -754,6 +754,10 @@ function M.toggle_visibility(explorer)
     explorer.split:show()
     explorer.is_hidden = false
     
+    -- Update winid after show() creates a new window
+    -- NUI creates a new window with a new winid when showing
+    explorer.winid = explorer.split.winid
+    
     -- Equalize diff windows after showing explorer
     -- When explorer shows, the remaining space should be split equally between diff windows
     vim.schedule(function()
