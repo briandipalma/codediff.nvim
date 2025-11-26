@@ -371,10 +371,8 @@ configure_file(
 
 # Make build.sh executable on Unix-like systems
 if(UNIX)
-    file(CHMOD ${SCRIPT_OUTPUT_DIR}/build.sh
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
-                    GROUP_READ GROUP_EXECUTE
-                    WORLD_READ WORLD_EXECUTE)
+    # Use execute_process instead of file(CHMOD) for CMake 3.15 compatibility
+    execute_process(COMMAND chmod +x ${SCRIPT_OUTPUT_DIR}/build.sh)
 endif()
 message(STATUS "✓ Generated: ../build.sh")
 
