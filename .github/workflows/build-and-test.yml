@@ -114,8 +114,25 @@ jobs:
           
           & "$nvimBinPath\nvim.exe" --version | Select-Object -First 1
 
-      - name: Build library (Ubuntu/macOS)
-        if: startsWith(matrix.runs-on, 'ubuntu') || startsWith(matrix.runs-on, 'macos')
+      - name: Build library (Ubuntu in CentOS 7 Docker for GLIBC 2.17 compatibility)
+        if: startsWith(matrix.runs-on, 'ubuntu')
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            centos:7 \
+            bash -c "
+              set -e
+              yum install -y epel-release
+              yum install -y centos-release-scl
+              yum install -y devtoolset-11-gcc devtoolset-11-gcc-c++ cmake3 make
+              source /opt/rh/devtoolset-11/enable
+              ln -s /usr/bin/cmake3 /usr/local/bin/cmake
+              make build
+            "
+
+      - name: Build library (macOS)
+        if: startsWith(matrix.runs-on, 'macos')
         run: make build
 
       - name: Build library (Windows)
