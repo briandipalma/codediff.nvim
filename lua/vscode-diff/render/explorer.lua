@@ -523,8 +523,8 @@ function M.setup_auto_refresh(explorer, tabpage)
     
     -- Schedule new refresh
     refresh_timer = vim.fn.timer_start(debounce_ms, function()
-      -- Only refresh if tabpage still exists
-      if vim.api.nvim_tabpage_is_valid(tabpage) then
+      -- Only refresh if tabpage still exists and explorer is visible
+      if vim.api.nvim_tabpage_is_valid(tabpage) and not explorer.is_hidden then
         M.refresh(explorer)
       end
       refresh_timer = nil
@@ -571,6 +571,16 @@ end
 -- Refresh explorer with updated git status
 function M.refresh(explorer)
   local git = require('vscode-diff.git')
+  
+  -- Skip refresh if explorer is hidden
+  if explorer.is_hidden then
+    return
+  end
+  
+  -- Verify window is still valid before accessing
+  if not vim.api.nvim_win_is_valid(explorer.winid) then
+    return
+  end
   
   -- Get current selection to restore it after refresh
   local current_node = explorer.tree:get_node()
