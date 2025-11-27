@@ -135,6 +135,8 @@ jobs:
               # ARM64: devtoolset-11 not available, use system GCC
               # x86_64: use devtoolset-11 for modern GCC with old GLIBC
               if [ \$(uname -m) = \"aarch64\" ]; then
+                # Remove SCL-RH repo (not needed for system GCC)
+                rm -f /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
                 yum install -y gcc gcc-c++ cmake3 make
                 ln -s /usr/bin/cmake3 /usr/local/bin/cmake
               else
