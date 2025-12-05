@@ -91,6 +91,7 @@ describe("Explorer Mode", function()
     assert.is_not_nil(status_result, "Status result should not be nil")
     assert.is_table(status_result.unstaged, "Should have unstaged table")
     assert.is_table(status_result.staged, "Should have staged table")
+    assert.is_table(status_result.conflicts, "Should have conflicts table")
     
     -- Should have at least one unstaged file (file1.txt modified)
     assert.is_true(#status_result.unstaged >= 1, "Should have unstaged changes")
@@ -138,6 +139,46 @@ describe("Explorer Mode", function()
       end
     end
     assert.is_true(has_untracked, "Should detect untracked file")
+  end)
+
+  -- Test 2.5: Git status detects merge conflicts
+  it("Detects merge conflicts", function()
+    -- Create a branch and make conflicting changes
+    vim.fn.system("git checkout -b feature")
+    vim.fn.writefile({"feature line 1", "line 2"}, temp_dir .. "/file1.txt")
+    vim.fn.system("git add file1.txt")
+    vim.fn.system('git commit -m "Feature change"')
+    
+    vim.fn.system("git checkout master")
+    vim.fn.writefile({"master line 1", "line 2"}, temp_dir .. "/file1.txt")
+    vim.fn.system("git add file1.txt")
+    vim.fn.system('git commit -m "Master change"')
+    
+    -- Attempt merge (will fail with conflict)
+    vim.fn.system("git merge feature")
+    
+    local callback_called = false
+    local status_result = nil
+    
+    git.get_status(temp_dir, function(err, result)
+      callback_called = true
+      status_result = result
+    end)
+    
+    vim.wait(2000, function() return callback_called end)
+    assert.is_true(callback_called)
+    
+    -- Check for conflict file
+    local has_conflict = false
+    for _, file in ipairs(status_result.conflicts) do
+      if file.path == "file1.txt" and file.status == "!" then
+        has_conflict = true
+      end
+    end
+    assert.is_true(has_conflict, "Should detect merge conflict")
+    
+    -- Abort merge to clean up
+    vim.fn.system("git merge --abort")
   end)
 
   -- Test 3: Explorer creates proper window layout

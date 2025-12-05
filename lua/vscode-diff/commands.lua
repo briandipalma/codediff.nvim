@@ -125,8 +125,9 @@ local function handle_explorer(revision, revision2)
           return
         end
 
-        -- Check if there are any changes
-        if #status_result.unstaged == 0 and #status_result.staged == 0 then
+        -- Check if there are any changes (including conflicts)
+        local has_conflicts = status_result.conflicts and #status_result.conflicts > 0
+        if #status_result.unstaged == 0 and #status_result.staged == 0 and not has_conflicts then
           vim.notify("No changes to show", vim.log.levels.INFO)
           return
         end
