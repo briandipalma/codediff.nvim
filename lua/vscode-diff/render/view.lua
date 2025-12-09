@@ -67,6 +67,7 @@ end
 ---@field modified_path string
 ---@field original_revision string?
 ---@field modified_revision string?
+---@field conflict boolean? For merge conflict mode: render both sides against base
 ---@field explorer_data table? For explorer mode: { status_result }
 
 -- Common logic: Compute diff and render highlights
@@ -137,6 +138,82 @@ local function compute_and_render(original_buf, modified_buf, original_lines, mo
   end
 
   return lines_diff
+end
+
+-- Conflict mode rendering: Both buffers show diff against base with alignment
+-- Left buffer (:3: theirs/incoming) and Right buffer (:2: ours/current)
+-- Both show green highlights indicating changes from base (:1:)
+-- Filler lines are inserted to align corresponding changes
+-- @param original_buf number: Left buffer (incoming :3:)
+-- @param modified_buf number: Right buffer (current :2:)
+-- @param base_lines table: Base content (:1:)
+-- @param original_lines table: Incoming content (:3:)
+-- @param modified_lines table: Current content (:2:)
+-- @param original_win number: Left window
+-- @param modified_win number: Right window
+-- @param auto_scroll_to_first_hunk boolean: Whether to scroll to first change
+-- @return table: { base_to_original_diff, base_to_modified_diff }
+local function compute_and_render_conflict(original_buf, modified_buf, base_lines, original_lines, modified_lines, original_win, modified_win, auto_scroll_to_first_hunk)
+  local diff_options = {
+    max_computation_time_ms = config.options.diff.max_computation_time_ms,
+  }
+
+  -- Compute base -> original (incoming) diff
+  local base_to_original_diff = diff_module.compute_diff(base_lines, original_lines, diff_options)
+  if not base_to_original_diff then
+    vim.notify("Failed to compute base->incoming diff", vim.log.levels.ERROR)
+    return nil
+  end
+
+  -- Compute base -> modified (current) diff
+  local base_to_modified_diff = diff_module.compute_diff(base_lines, modified_lines, diff_options)
+  if not base_to_modified_diff then
+    vim.notify("Failed to compute base->current diff", vim.log.levels.ERROR)
+    return nil
+  end
+
+  -- Render merge view with alignment and filler lines
+  core.render_merge_view(original_buf, modified_buf, base_to_original_diff, base_to_modified_diff, base_lines, original_lines, modified_lines)
+
+  -- Apply semantic tokens (both are virtual buffers in conflict mode)
+  semantic.apply_semantic_tokens(original_buf, modified_buf)
+  semantic.apply_semantic_tokens(modified_buf, original_buf)
+
+  -- Setup window options with scrollbind (filler lines enable proper alignment)
+  if original_win and modified_win and vim.api.nvim_win_is_valid(original_win) and vim.api.nvim_win_is_valid(modified_win) then
+    vim.wo[original_win].wrap = false
+    vim.wo[modified_win].wrap = false
+
+    -- Reset scroll position and enable scrollbind
+    vim.api.nvim_win_set_cursor(original_win, {1, 0})
+    vim.api.nvim_win_set_cursor(modified_win, {1, 0})
+    vim.wo[original_win].scrollbind = true
+    vim.wo[modified_win].scrollbind = true
+
+    -- Scroll to first change in either buffer
+    if auto_scroll_to_first_hunk then
+      local first_line = nil
+      if #base_to_original_diff.changes > 0 then
+        first_line = base_to_original_diff.changes[1].modified.start_line
+      elseif #base_to_modified_diff.changes > 0 then
+        first_line = base_to_modified_diff.changes[1].modified.start_line
+      end
+
+      if first_line then
+        pcall(vim.api.nvim_win_set_cursor, original_win, {first_line, 0})
+        pcall(vim.api.nvim_win_set_cursor, modified_win, {first_line, 0})
+        if vim.api.nvim_win_is_valid(modified_win) then
+          vim.api.nvim_set_current_win(modified_win)
+          vim.cmd("normal! zz")
+        end
+      end
+    end
+  end
+
+  return {
+    base_to_original_diff = base_to_original_diff,
+    base_to_modified_diff = base_to_modified_diff,
+  }
 end
 
 -- Common logic: Setup auto-refresh for real file buffers
@@ -679,35 +756,80 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
     local original_lines = vim.api.nvim_buf_get_lines(original_info.bufnr, 0, -1, false)
     local modified_lines = vim.api.nvim_buf_get_lines(modified_info.bufnr, 0, -1, false)
     
-    -- Compute and render (scrollbind will be handled inside)
     -- Use the provided auto_scroll parameter, default to false if not specified
     local should_auto_scroll = auto_scroll_to_first_hunk == true
-    local lines_diff = compute_and_render(
-      original_info.bufnr, modified_info.bufnr,
-      original_lines, modified_lines,
-      original_is_virtual, modified_is_virtual,
-      original_win, modified_win,
-      should_auto_scroll
-    )
+    local lines_diff
 
-    if lines_diff then
-      -- Update lifecycle session with all new state
-      lifecycle.update_buffers(tabpage, original_info.bufnr, modified_info.bufnr)
-      lifecycle.update_git_root(tabpage, session_config.git_root)
-      lifecycle.update_revisions(tabpage, session_config.original_revision, session_config.modified_revision)
-      lifecycle.update_diff_result(tabpage, lines_diff)
-      lifecycle.update_changedtick(
-        tabpage,
-        vim.api.nvim_buf_get_changedtick(original_info.bufnr),
-        vim.api.nvim_buf_get_changedtick(modified_info.bufnr)
+    if session_config.conflict then
+      -- Conflict mode: Fetch base content and render both sides against base
+      local git = require('vscode-diff.git')
+      local base_revision = ":1"
+      
+      git.get_file_content(base_revision, session_config.git_root, session_config.original_path, function(err, base_lines)
+        -- For add/add conflicts (AA), there's no base version - use empty base
+        if err then
+          base_lines = {}
+        end
+        
+        vim.schedule(function()
+          local conflict_diffs = compute_and_render_conflict(
+            original_info.bufnr, modified_info.bufnr,
+            base_lines, original_lines, modified_lines,
+            original_win, modified_win,
+            should_auto_scroll
+          )
+
+          if conflict_diffs then
+            -- Update lifecycle session with conflict diff info
+            -- Store combined diff result for lifecycle compatibility
+            lifecycle.update_buffers(tabpage, original_info.bufnr, modified_info.bufnr)
+            lifecycle.update_git_root(tabpage, session_config.git_root)
+            lifecycle.update_revisions(tabpage, session_config.original_revision, session_config.modified_revision)
+            lifecycle.update_diff_result(tabpage, conflict_diffs.base_to_modified_diff)
+            lifecycle.update_changedtick(
+              tabpage,
+              vim.api.nvim_buf_get_changedtick(original_info.bufnr),
+              vim.api.nvim_buf_get_changedtick(modified_info.bufnr)
+            )
+
+            -- Setup auto-refresh for consistency (both buffers are virtual in conflict mode)
+            setup_auto_refresh(original_info.bufnr, modified_info.bufnr, true, true)
+
+            -- Setup all keymaps in one place (centralized)
+            local is_explorer_mode = session.mode == "explorer"
+            setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, is_explorer_mode)
+          end
+        end)
+      end)
+    else
+      -- Normal mode: Compute and render diff between left and right
+      lines_diff = compute_and_render(
+        original_info.bufnr, modified_info.bufnr,
+        original_lines, modified_lines,
+        original_is_virtual, modified_is_virtual,
+        original_win, modified_win,
+        should_auto_scroll
       )
 
-      -- Re-enable auto-refresh for real file buffers
-      setup_auto_refresh(original_info.bufnr, modified_info.bufnr, original_is_virtual, modified_is_virtual)
+      if lines_diff then
+        -- Update lifecycle session with all new state
+        lifecycle.update_buffers(tabpage, original_info.bufnr, modified_info.bufnr)
+        lifecycle.update_git_root(tabpage, session_config.git_root)
+        lifecycle.update_revisions(tabpage, session_config.original_revision, session_config.modified_revision)
+        lifecycle.update_diff_result(tabpage, lines_diff)
+        lifecycle.update_changedtick(
+          tabpage,
+          vim.api.nvim_buf_get_changedtick(original_info.bufnr),
+          vim.api.nvim_buf_get_changedtick(modified_info.bufnr)
+        )
 
-      -- Setup all keymaps in one place (centralized)
-      local is_explorer_mode = session.mode == "explorer"
-      setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, is_explorer_mode)
+        -- Re-enable auto-refresh for real file buffers
+        setup_auto_refresh(original_info.bufnr, modified_info.bufnr, original_is_virtual, modified_is_virtual)
+
+        -- Setup all keymaps in one place (centralized)
+        local is_explorer_mode = session.mode == "explorer"
+        setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, is_explorer_mode)
+      end
     end
   end
 

@@ -11,6 +11,7 @@ diff
 
 # Generated VSCode diff bundle (can be regenerated with ./build-vscode-diff.sh)
 vscode-diff.mjs
+vscode-merge.mjs
 example
 example/
 

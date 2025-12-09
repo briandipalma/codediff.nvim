@@ -404,4 +404,93 @@ describe("Render Core", function()
     vim.api.nvim_buf_delete(left_buf, {force = true})
     vim.api.nvim_buf_delete(right_buf, {force = true})
   end)
+
+  -- Test 16: render_single_buffer with modified side
+  it("render_single_buffer renders modified side with insert highlights", function()
+    local buf = vim.api.nvim_create_buf(false, true)
+
+    local original = {"line 1", "line 2"}
+    local modified = {"line 1", "line 2", "line 3"}
+
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, modified)
+
+    local lines_diff = diff.compute_diff(original, modified)
+    core.render_single_buffer(buf, lines_diff, "modified")
+
+    -- Verify added line has highlight
+    local marks = vim.api.nvim_buf_get_extmarks(buf, highlights.ns_highlight, 0, -1, {})
+    assert.is_true(#marks > 0, "Modified side should have highlight extmarks")
+
+    vim.api.nvim_buf_delete(buf, {force = true})
+  end)
+
+  -- Test 17: render_single_buffer with original side
+  it("render_single_buffer renders original side with delete highlights", function()
+    local buf = vim.api.nvim_create_buf(false, true)
+
+    local original = {"line 1", "line 2", "line 3"}
+    local modified = {"line 1", "line 2"}
+
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, original)
+
+    local lines_diff = diff.compute_diff(original, modified)
+    core.render_single_buffer(buf, lines_diff, "original")
+
+    -- Verify deleted line has highlight
+    local marks = vim.api.nvim_buf_get_extmarks(buf, highlights.ns_highlight, 0, -1, {})
+    assert.is_true(#marks > 0, "Original side should have highlight extmarks")
+
+    vim.api.nvim_buf_delete(buf, {force = true})
+  end)
+
+  -- Test 18: render_single_buffer clears previous highlights
+  it("render_single_buffer clears previous highlights on re-render", function()
+    local buf = vim.api.nvim_create_buf(false, true)
+
+    local original_v1 = {"line 1"}
+    local modified_v1 = {"line 1", "added"}
+
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, modified_v1)
+
+    -- First render
+    local lines_diff_v1 = diff.compute_diff(original_v1, modified_v1)
+    core.render_single_buffer(buf, lines_diff_v1, "modified")
+
+    local marks_after_first = vim.api.nvim_buf_get_extmarks(buf, highlights.ns_highlight, 0, -1, {})
+    local first_count = #marks_after_first
+
+    -- Second render with no changes
+    local no_change = {"same"}
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, no_change)
+    local lines_diff_v2 = diff.compute_diff(no_change, no_change)
+    core.render_single_buffer(buf, lines_diff_v2, "modified")
+
+    local marks_after_second = vim.api.nvim_buf_get_extmarks(buf, highlights.ns_highlight, 0, -1, {})
+
+    assert.is_true(first_count > 0, "First render had extmarks")
+    assert.equal(0, #marks_after_second, "Old extmarks should be cleared on re-render")
+
+    vim.api.nvim_buf_delete(buf, {force = true})
+  end)
+
+  -- Test 19: render_single_buffer with no changes
+  it("render_single_buffer handles no changes gracefully", function()
+    local buf = vim.api.nvim_create_buf(false, true)
+
+    local content = {"line 1", "line 2"}
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, content)
+
+    local lines_diff = diff.compute_diff(content, content)
+    
+    local success = pcall(function()
+      core.render_single_buffer(buf, lines_diff, "modified")
+    end)
+
+    assert.is_true(success, "Should handle no changes without error")
+
+    local marks = vim.api.nvim_buf_get_extmarks(buf, highlights.ns_highlight, 0, -1, {})
+    assert.equal(0, #marks, "No changes should mean no highlights")
+
+    vim.api.nvim_buf_delete(buf, {force = true})
+  end)
 end)
