@@ -88,8 +88,12 @@ local function do_diff_update(bufnr)
     core.render_diff(original_bufnr, modified_bufnr, original_lines, modified_lines, lines_diff)
     
     -- Re-sync scrollbind after filler changes
-    -- This ensures both windows stay aligned even if fillers were added/removed
-    local original_win, modified_win = nil, nil
+    -- This ensures all windows stay aligned even if fillers were added/removed
+    local original_win, modified_win, result_win = nil, nil, nil
+    local lifecycle = require('vscode-diff.render.lifecycle')
+    local tabpage = vim.api.nvim_get_current_tabpage()
+    local _, stored_result_win = lifecycle.get_result(tabpage)
+    
     for _, win in ipairs(vim.api.nvim_list_wins()) do
       local buf = vim.api.nvim_win_get_buf(win)
       if buf == original_bufnr then
@@ -99,32 +103,55 @@ local function do_diff_update(bufnr)
       end
     end
     
+    -- Check if result window is valid
+    if stored_result_win and vim.api.nvim_win_is_valid(stored_result_win) then
+      result_win = stored_result_win
+    end
+    
     if original_win and modified_win then
       local current_win = vim.api.nvim_get_current_win()
       
       -- Only resync if user is in one of the diff windows
-      if current_win == original_win or current_win == modified_win then
+      if current_win == original_win or current_win == modified_win or current_win == result_win then
         local other_win = current_win == original_win and modified_win or original_win
         
-        -- Step 1: Save full view state for BOTH windows to prevent flicker
+        -- Step 1: Save full view state for all windows to prevent flicker
         local saved_view = vim.fn.winsaveview()
         vim.api.nvim_set_current_win(other_win)
         local other_saved_view = vim.fn.winsaveview()
+        local result_saved_view = nil
+        if result_win then
+          vim.api.nvim_set_current_win(result_win)
+          result_saved_view = vim.fn.winsaveview()
+        end
         vim.api.nvim_set_current_win(current_win)
         
-        -- Step 2: Reset both windows to line 1 (baseline for scrollbind)
+        -- Step 2: Reset all windows to line 1 (baseline for scrollbind)
         vim.api.nvim_win_set_cursor(original_win, {1, 0})
         vim.api.nvim_win_set_cursor(modified_win, {1, 0})
+        if result_win then
+          vim.api.nvim_win_set_cursor(result_win, {1, 0})
+        end
         
         -- Step 3: Re-establish scrollbind (reset sync state)
         vim.wo[original_win].scrollbind = false
         vim.wo[modified_win].scrollbind = false
+        if result_win then
+          vim.wo[result_win].scrollbind = false
+        end
         vim.wo[original_win].scrollbind = true
         vim.wo[modified_win].scrollbind = true
+        if result_win then
+          vim.wo[result_win].scrollbind = true
+        end
         
-        -- Step 4: Restore full view state for BOTH windows
+        -- Step 4: Restore full view state for all windows
         vim.api.nvim_set_current_win(other_win)
         vim.fn.winrestview(other_saved_view)
+        if result_win and result_saved_view then
+          vim.api.nvim_set_current_win(result_win)
+          vim.fn.winrestview(result_saved_view)
+        end
         vim.api.nvim_set_current_win(current_win)
         vim.fn.winrestview(saved_view)
       end

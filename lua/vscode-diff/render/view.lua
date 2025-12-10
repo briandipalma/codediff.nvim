@@ -173,7 +173,7 @@ local function compute_and_render_conflict(original_buf, modified_buf, base_line
   end
 
   -- Render merge view with alignment and filler lines
-  core.render_merge_view(original_buf, modified_buf, base_to_original_diff, base_to_modified_diff, base_lines, original_lines, modified_lines)
+  local render_result = core.render_merge_view(original_buf, modified_buf, base_to_original_diff, base_to_modified_diff, base_lines, original_lines, modified_lines)
 
   -- Apply semantic tokens (both are virtual buffers in conflict mode)
   semantic.apply_semantic_tokens(original_buf, modified_buf)
@@ -213,6 +213,7 @@ local function compute_and_render_conflict(original_buf, modified_buf, base_line
   return {
     base_to_original_diff = base_to_original_diff,
     base_to_modified_diff = base_to_modified_diff,
+    conflict_blocks = render_result and render_result.conflict_blocks or {},
   }
 end
 
@@ -869,11 +870,18 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
             vim.wo[result_win].cursorline = true
             vim.wo[result_win].winbar = ""
 
+            -- Enable scrollbind for result window (sync with top two buffers)
+            vim.api.nvim_win_set_cursor(result_win, {1, 0})
+            vim.wo[result_win].scrollbind = true
+
             -- Update lifecycle with result buffer/window
             lifecycle.set_result(tabpage, result_bufnr, result_win)
 
             -- Store BASE lines for result buffer diff (used on resume)
             lifecycle.set_result_base_lines(tabpage, base_lines)
+
+            -- Store conflict blocks for accept/reject actions
+            lifecycle.set_conflict_blocks(tabpage, conflict_diffs.conflict_blocks)
 
             -- Track this file for unsaved warning on close
             lifecycle.track_conflict_file(tabpage, abs_path)
@@ -884,6 +892,10 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
             -- Setup all keymaps (now that result buffer is registered in lifecycle)
             local is_explorer_mode = session.mode == "explorer"
             setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, is_explorer_mode)
+
+            -- Setup conflict-specific keymaps
+            local conflict_actions = require('vscode-diff.render.conflict_actions')
+            conflict_actions.setup_keymaps(tabpage)
 
             -- Return focus to modified window (current/ours side)
             if vim.api.nvim_win_is_valid(modified_win) then

@@ -210,28 +210,44 @@ local function resume_diff(tabpage)
     -- Re-sync scrollbind ONLY if diff was recomputed (fillers may have changed)
     if diff_was_recomputed and vim.api.nvim_win_is_valid(diff.original_win) and vim.api.nvim_win_is_valid(diff.modified_win) then
       local current_win = vim.api.nvim_get_current_win()
+      local result_win = diff.result_win and vim.api.nvim_win_is_valid(diff.result_win) and diff.result_win or nil
 
-      if current_win == diff.original_win or current_win == diff.modified_win then
+      if current_win == diff.original_win or current_win == diff.modified_win or current_win == result_win then
         -- Step 1: Remember cursor position (line AND column)
         local saved_cursor = vim.api.nvim_win_get_cursor(current_win)
 
-        -- Step 2: Reset both to line 1 (baseline)
+        -- Step 2: Reset all to line 1 (baseline)
         vim.api.nvim_win_set_cursor(diff.original_win, {1, 0})
         vim.api.nvim_win_set_cursor(diff.modified_win, {1, 0})
+        if result_win then
+          vim.api.nvim_win_set_cursor(result_win, {1, 0})
+        end
 
         -- Step 3: Re-establish scrollbind (reset sync state)
         vim.wo[diff.original_win].scrollbind = false
         vim.wo[diff.modified_win].scrollbind = false
+        if result_win then
+          vim.wo[result_win].scrollbind = false
+        end
         vim.wo[diff.original_win].scrollbind = true
         vim.wo[diff.modified_win].scrollbind = true
-        
+        if result_win then
+          vim.wo[result_win].scrollbind = true
+        end
+
         -- Re-apply critical window options that might have been reset
         vim.wo[diff.original_win].wrap = false
         vim.wo[diff.modified_win].wrap = false
+        if result_win then
+          vim.wo[result_win].wrap = false
+        end
 
         -- Step 4: Restore cursor position with both line and column
         pcall(vim.api.nvim_win_set_cursor, diff.original_win, saved_cursor)
         pcall(vim.api.nvim_win_set_cursor, diff.modified_win, saved_cursor)
+        if result_win then
+          pcall(vim.api.nvim_win_set_cursor, result_win, saved_cursor)
+        end
       end
     end
   end
@@ -646,7 +662,7 @@ end
 --- Find tabpage containing a buffer
 function M.find_tabpage_by_buffer(bufnr)
   for tabpage, session in pairs(active_diffs) do
-    if session.original_bufnr == bufnr or session.modified_bufnr == bufnr then
+    if session.original_bufnr == bufnr or session.modified_bufnr == bufnr or session.result_bufnr == bufnr then
       return tabpage
     end
   end
@@ -810,6 +826,24 @@ function M.get_result(tabpage)
   local session = active_diffs[tabpage]
   if not session then return nil, nil end
   return session.result_bufnr, session.result_win
+end
+
+--- Store conflict blocks (mapping alignments) for a session
+--- @param tabpage number
+--- @param blocks table List of conflict blocks from compute_mapping_alignments
+function M.set_conflict_blocks(tabpage, blocks)
+  local session = active_diffs[tabpage]
+  if not session then return false end
+  session.conflict_blocks = blocks
+  return true
+end
+
+--- Get conflict blocks for a session
+--- @param tabpage number
+--- @return table|nil List of conflict blocks
+function M.get_conflict_blocks(tabpage)
+  local session = active_diffs[tabpage]
+  return session and session.conflict_blocks
 end
 
 --- Track a file opened in conflict mode (for unsaved warning)
