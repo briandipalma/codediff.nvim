@@ -704,6 +704,10 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
   -- Clear highlights from old buffers (before they're replaced/deleted)
   lifecycle.clear_highlights(old_original_buf)
   lifecycle.clear_highlights(old_modified_buf)
+  
+  -- Clear stored_diff_result to signal that an update is in progress
+  -- This allows wait_for_session_ready to detect pending updates
+  lifecycle.update_diff_result(tabpage, nil)
 
   -- Determine if new buffers are virtual
   local original_is_virtual = is_virtual_revision(session_config.original_revision)
