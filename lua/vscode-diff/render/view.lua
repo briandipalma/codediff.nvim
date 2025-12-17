@@ -315,10 +315,9 @@ local function setup_conflict_result_window(tabpage, session_config, original_wi
   -- Enable auto-refresh for result buffer
   auto_refresh.enable_for_result(result_bufnr)
 
-  -- Setup conflict-specific keymaps
+  -- Initialize conflict tracking (keymaps setup separately after setup_all_keymaps)
   local conflict_actions = require('vscode-diff.render.conflict_actions')
   conflict_actions.initialize_tracking(result_bufnr, conflict_diffs.conflict_blocks)
-  conflict_actions.setup_keymaps(tabpage)
 
   -- Return focus to modified window
   if vim.api.nvim_win_is_valid(modified_win) then
@@ -764,6 +763,9 @@ function M.create(session_config, filetype, on_ready)
               local success = setup_conflict_result_window(tabpage, session_config, original_win, modified_win, base_lines, conflict_diffs, false)
               if success then
                 setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, false)
+                -- Setup conflict keymaps AFTER setup_all_keymaps to override do/dp
+                local conflict_actions = require('vscode-diff.render.conflict_actions')
+                conflict_actions.setup_keymaps(tabpage)
               end
               
               -- Signal that view is ready
@@ -1104,6 +1106,9 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
             local success = setup_conflict_result_window(tabpage, session_config, original_win, modified_win, base_lines, conflict_diffs, true)
             if success then
               setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, is_explorer_mode)
+              -- Setup conflict keymaps AFTER setup_all_keymaps to override do/dp
+              local conflict_actions = require('vscode-diff.render.conflict_actions')
+              conflict_actions.setup_keymaps(tabpage)
             end
           end
         end)

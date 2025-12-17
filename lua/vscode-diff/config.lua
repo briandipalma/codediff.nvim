@@ -51,6 +51,9 @@ M.defaults = {
       discard = "<leader>cx",          -- Discard both, keep base
       next_conflict = "]x",            -- Jump to next conflict
       prev_conflict = "[x",            -- Jump to previous conflict
+      -- Vimdiff-style numbered diffget (from result buffer)
+      diffget_incoming = "2do",        -- Get hunk from incoming (left/theirs) buffer
+      diffget_current = "3do",         -- Get hunk from current (right/ours) buffer
     },
   },
 }
