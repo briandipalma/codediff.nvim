@@ -195,6 +195,8 @@ describe("Explorer Buffer Management", function()
     print("DEBUG: resolve test:")
     print("DEBUG:   fnamemodify =", vim.fn.fnamemodify(repo.dir, ':p'))
     print("DEBUG:   resolve =", vim.fn.resolve(vim.fn.fnamemodify(repo.dir, ':p')))
+    local clean = vim.fn.fnamemodify(repo.dir, ':p'):gsub('[/\\]$', '')
+    print("DEBUG:   glob =", vim.inspect(vim.fn.glob(clean, false, true)))
 
     _, modified_buf = lifecycle.get_buffers(tabpage)
     -- Wait for buffer content to actually contain expected text
