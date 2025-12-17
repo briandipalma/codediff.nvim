@@ -35,6 +35,8 @@ M.defaults = {
       prev_hunk = "[c",
       next_file = "]f",
       prev_file = "[f",
+      diff_get = "do",              -- Get change from other buffer (like vimdiff)
+      diff_put = "dp",              -- Put change to other buffer (like vimdiff)
     },
     explorer = {
       select = "<CR>",

@@ -1,5 +1,9 @@
 # vscode-diff.nvim
 
+[![Pre-release](https://img.shields.io/github/v/release/esmuellert/vscode-diff.nvim?include_prereleases&label=🚀%20pre-release&color=orange)](https://github.com/esmuellert/vscode-diff.nvim/issues/97)
+
+> **🧪 v2.0.0 Pre-release Available!** The `next` branch includes new features like **Git Merge Tool support**. [Help us test it!](https://github.com/esmuellert/vscode-diff.nvim/issues/97)
+
 A Neovim plugin that provides VSCode-style side-by-side diff rendering with two-tier highlighting.
 
 <div align="center">

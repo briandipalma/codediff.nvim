@@ -434,6 +434,132 @@ local function setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_exp
     explorer.toggle_visibility(explorer_obj)
   end
 
+  -- Helper: Find hunk at cursor position
+  -- Returns the hunk and its index, or nil if cursor is not in a hunk
+  local function find_hunk_at_cursor()
+    local session = lifecycle.get_session(tabpage)
+    if not session or not session.stored_diff_result then return nil, nil end
+    local diff_result = session.stored_diff_result
+    if #diff_result.changes == 0 then return nil, nil end
+
+    local current_buf = vim.api.nvim_get_current_buf()
+    local is_original = current_buf == original_bufnr
+    local cursor = vim.api.nvim_win_get_cursor(0)
+    local current_line = cursor[1]
+
+    for i, mapping in ipairs(diff_result.changes) do
+      local start_line = is_original and mapping.original.start_line or mapping.modified.start_line
+      local end_line = is_original and mapping.original.end_line or mapping.modified.end_line
+      -- Check if cursor is within this hunk (end_line is exclusive)
+      if current_line >= start_line and current_line < end_line then
+        return mapping, i
+      end
+      -- Also match if it's a deletion (empty range) and cursor is at start
+      if start_line == end_line and current_line == start_line then
+        return mapping, i
+      end
+    end
+    return nil, nil
+  end
+
+  -- Helper: Diff get - obtain change from other buffer to current buffer
+  local function diff_get()
+    local session = lifecycle.get_session(tabpage)
+    if not session then return end
+
+    local current_buf = vim.api.nvim_get_current_buf()
+    local is_original = current_buf == original_bufnr
+    local target_buf = current_buf
+    local source_buf = is_original and modified_bufnr or original_bufnr
+
+    -- Check if target buffer is modifiable
+    if not vim.bo[target_buf].modifiable then
+      vim.notify("Buffer is not modifiable", vim.log.levels.WARN)
+      return
+    end
+
+    local hunk, hunk_idx = find_hunk_at_cursor()
+    if not hunk then
+      vim.notify("No hunk at cursor position", vim.log.levels.WARN)
+      return
+    end
+
+    -- Get source and target ranges
+    local source_range = is_original and hunk.modified or hunk.original
+    local target_range = is_original and hunk.original or hunk.modified
+
+    -- Get lines from source buffer
+    local source_lines = vim.api.nvim_buf_get_lines(
+      source_buf,
+      source_range.start_line - 1,
+      source_range.end_line - 1,
+      false
+    )
+
+    -- Replace lines in target buffer
+    vim.api.nvim_buf_set_lines(
+      target_buf,
+      target_range.start_line - 1,
+      target_range.end_line - 1,
+      false,
+      source_lines
+    )
+
+    -- Trigger diff refresh to update highlights
+    auto_refresh.trigger(target_buf)
+
+    vim.api.nvim_echo({{string.format('Obtained hunk %d', hunk_idx), 'None'}}, false, {})
+  end
+
+  -- Helper: Diff put - put change from current buffer to other buffer
+  local function diff_put()
+    local session = lifecycle.get_session(tabpage)
+    if not session then return end
+
+    local current_buf = vim.api.nvim_get_current_buf()
+    local is_original = current_buf == original_bufnr
+    local source_buf = current_buf
+    local target_buf = is_original and modified_bufnr or original_bufnr
+
+    -- Check if target buffer is modifiable
+    if not vim.bo[target_buf].modifiable then
+      vim.notify("Target buffer is not modifiable", vim.log.levels.WARN)
+      return
+    end
+
+    local hunk, hunk_idx = find_hunk_at_cursor()
+    if not hunk then
+      vim.notify("No hunk at cursor position", vim.log.levels.WARN)
+      return
+    end
+
+    -- Get source and target ranges
+    local source_range = is_original and hunk.original or hunk.modified
+    local target_range = is_original and hunk.modified or hunk.original
+
+    -- Get lines from source buffer
+    local source_lines = vim.api.nvim_buf_get_lines(
+      source_buf,
+      source_range.start_line - 1,
+      source_range.end_line - 1,
+      false
+    )
+
+    -- Replace lines in target buffer
+    vim.api.nvim_buf_set_lines(
+      target_buf,
+      target_range.start_line - 1,
+      target_range.end_line - 1,
+      false,
+      source_lines
+    )
+
+    -- Trigger diff refresh to update highlights
+    auto_refresh.trigger(target_buf)
+
+    vim.api.nvim_echo({{string.format('Put hunk %d', hunk_idx), 'None'}}, false, {})
+  end
+
   -- ========================================================================
   -- Bind all keymaps using unified API (one place for all keymaps!)
   -- ========================================================================
@@ -464,6 +590,14 @@ local function setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_exp
     if keymaps.prev_file then
       lifecycle.set_tab_keymap(tabpage, 'n', keymaps.prev_file, navigate_prev_file, { desc = 'Previous file in explorer' })
     end
+  end
+
+  -- Diff get/put (do, dp) - like vimdiff
+  if keymaps.diff_get then
+    lifecycle.set_tab_keymap(tabpage, 'n', keymaps.diff_get, diff_get, { desc = 'Get change from other buffer' })
+  end
+  if keymaps.diff_put then
+    lifecycle.set_tab_keymap(tabpage, 'n', keymaps.diff_put, diff_put, { desc = 'Put change to other buffer' })
   end
 end
 
