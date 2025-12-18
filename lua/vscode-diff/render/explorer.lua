@@ -24,7 +24,13 @@ local function get_file_icon(path)
   return "", nil
 end
 
--- Create tree nodes for file list
+-- Folder icon (nvim-web-devicons doesn't have folder icons, use nerd font icons)
+local function get_folder_icon(is_open)
+  -- Nerd Font: folder = e5ff, folder-open = e5fe
+  return is_open and "\u{e5fe}" or "\u{e5ff}", "Directory"
+end
+
+-- Create flat file nodes (list mode)
 local function create_file_nodes(files, git_root, group)
   local nodes = {}
   for _, file in ipairs(files) do
@@ -49,10 +55,105 @@ local function create_file_nodes(files, git_root, group)
   return nodes
 end
 
+-- Create tree nodes with directory hierarchy (tree mode)
+local function create_tree_file_nodes(files, git_root, group)
+  -- Build directory structure
+  local dir_tree = {}
+
+  for _, file in ipairs(files) do
+    local parts = {}
+    for part in file.path:gmatch("[^/]+") do
+      parts[#parts + 1] = part
+    end
+
+    local current = dir_tree
+    for i = 1, #parts - 1 do
+      local dir_name = parts[i]
+      if not current[dir_name] then
+        current[dir_name] = { _is_dir = true, _children = {} }
+      end
+      current = current[dir_name]._children
+    end
+
+    -- Add file at leaf
+    local filename = parts[#parts]
+    current[filename] = {
+      _is_dir = false,
+      _file = file,
+    }
+  end
+
+  -- Convert to Tree.Node recursively
+  local function build_nodes(subtree, parent_path)
+    local nodes = {}
+    local sorted_keys = {}
+
+    for key in pairs(subtree) do
+      sorted_keys[#sorted_keys + 1] = key
+    end
+    -- Sort: directories first, then files, alphabetically
+    table.sort(sorted_keys, function(a, b)
+      local a_is_dir = subtree[a]._is_dir
+      local b_is_dir = subtree[b]._is_dir
+      if a_is_dir ~= b_is_dir then
+        return a_is_dir
+      end
+      return a < b
+    end)
+
+    for _, key in ipairs(sorted_keys) do
+      local item = subtree[key]
+      local full_path = parent_path ~= "" and (parent_path .. "/" .. key) or key
+
+      if item._is_dir then
+        -- Directory node
+        local children = build_nodes(item._children, full_path)
+        nodes[#nodes + 1] = Tree.Node({
+          text = key,
+          data = {
+            type = "directory",
+            name = key,
+            dir_path = full_path,
+            group = group,
+          }
+        }, children)
+      else
+        -- File node
+        local file = item._file
+        local icon, icon_color = get_file_icon(file.path)
+        local status_info = STATUS_SYMBOLS[file.status] or { symbol = file.status, color = "Normal" }
+
+        nodes[#nodes + 1] = Tree.Node({
+          text = key,
+          data = {
+            path = file.path,
+            status = file.status,
+            old_path = file.old_path,
+            icon = icon,
+            icon_color = icon_color,
+            status_symbol = status_info.symbol,
+            status_color = status_info.color,
+            git_root = git_root,
+            group = group,
+          }
+        })
+      end
+    end
+
+    return nodes
+  end
+
+  return build_nodes(dir_tree, "")
+end
+
 -- Create explorer tree structure
 local function create_tree_data(status_result, git_root, base_revision)
-  local unstaged_nodes = create_file_nodes(status_result.unstaged, git_root, "unstaged")
-  local staged_nodes = create_file_nodes(status_result.staged, git_root, "staged")
+  local explorer_config = config.options.explorer or {}
+  local view_mode = explorer_config.view_mode or "list"
+
+  local create_nodes = (view_mode == "tree") and create_tree_file_nodes or create_file_nodes
+  local unstaged_nodes = create_nodes(status_result.unstaged, git_root, "unstaged")
+  local staged_nodes = create_nodes(status_result.staged, git_root, "staged")
 
   if base_revision then
     -- Revision mode: single group showing all changes
@@ -84,15 +185,25 @@ local function prepare_node(node, max_width, selected_path, selected_group)
 
   if data.type == "group" then
     -- Group header
-    local icon = node:is_expanded() and "" or ""
-    line:append(icon .. " ", "Directory")
+    line:append(" ", "Directory")
     line:append(node.text, "Directory")
+  elseif data.type == "directory" then
+    -- Directory node (tree view mode) - match file icon style
+    local indent = string.rep("  ", node:get_depth() - 1)
+    local folder_icon, folder_color = get_folder_icon(node:is_expanded())
+    line:append(indent, "Directory")
+    line:append(folder_icon .. " ", folder_color or "Directory")
+    line:append(data.name, "Directory")
   else
     -- Match both path AND group to handle files in both staged and unstaged
     local is_selected = data.path and data.path == selected_path and data.group == selected_group
     local function get_hl(default)
       return is_selected and "CodeDiffExplorerSelected" or (default or "Normal")
     end
+
+    -- Check if we're in tree mode (directory is already shown in hierarchy)
+    local explorer_config = config.options.explorer or {}
+    local view_mode = explorer_config.view_mode or "list"
 
     -- File entry - VSCode style: filename (bold) + directory (dimmed) + status (right-aligned)
     local indent = string.rep("  ", node:get_depth() - 1)
@@ -110,7 +221,8 @@ local function prepare_node(node, max_width, selected_path, selected_group)
     -- Split path into filename and directory
     local full_path = data.path or node.text
     local filename = full_path:match("([^/]+)$") or full_path
-    local directory = full_path:sub(1, -(#filename + 1))  -- Remove filename, keep trailing /
+    -- In tree mode, don't show directory (it's in the hierarchy)
+    local directory = (view_mode == "tree") and "" or full_path:sub(1, -(#filename + 1))
 
     -- Calculate how much width we've used and reserve for status
     local used_width = vim.fn.strdisplaywidth(indent) + vim.fn.strdisplaywidth(icon_part)
@@ -226,9 +338,41 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
   })
 
   -- Expand all groups by default before first render
+  -- In tree mode, also expand all directories
+  local function expand_nodes_recursive(nodes)
+    for _, node in ipairs(nodes) do
+      if node.data and (node.data.type == "group" or node.data.type == "directory") then
+        node:expand()
+        if node:has_children() then
+          expand_nodes_recursive(node:get_child_ids())
+        end
+      end
+    end
+  end
+  
+  -- nui.tree get_child_ids returns IDs, need to get actual nodes
   for _, node in ipairs(tree_data) do
     if node.data and node.data.type == "group" then
       node:expand()
+    end
+  end
+  
+  -- For tree mode, expand directories after initial render when we have node IDs
+  local explorer_config = config.options.explorer or {}
+  if explorer_config.view_mode == "tree" then
+    -- We need to expand directory nodes - they're children of group nodes
+    local function expand_all_dirs(parent_node)
+      if not parent_node:has_children() then return end
+      for _, child_id in ipairs(parent_node:get_child_ids()) do
+        local child = tree:get_node(child_id)
+        if child and child.data and child.data.type == "directory" then
+          child:expand()
+          expand_all_dirs(child)
+        end
+      end
+    end
+    for _, node in ipairs(tree_data) do
+      expand_all_dirs(node)
     end
   end
 
@@ -389,8 +533,8 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
       local node = tree:get_node()
       if not node then return end
   
-      if node.data and node.data.type == "group" then
-        -- Toggle group
+      if node.data and (node.data.type == "group" or node.data.type == "directory") then
+        -- Toggle group or directory
         if node:is_expanded() then
           node:collapse()
         else
@@ -409,7 +553,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
   -- Double click also works for files
   vim.keymap.set("n", "<2-LeftMouse>", function()
     local node = tree:get_node()
-    if not node or not node.data or node.data.type == "group" then return end
+    if not node or not node.data or node.data.type == "group" or node.data.type == "directory" then return end
     explorer.on_file_select(node.data)
   end, vim.tbl_extend("force", map_options, { buffer = split.bufnr }))
 
@@ -483,6 +627,13 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
   if config.options.keymaps.explorer.refresh then
     vim.keymap.set("n", config.options.keymaps.explorer.refresh, function()
       M.refresh(explorer)
+    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr }))
+  end
+
+  -- Toggle view mode (i key) - switch between 'list' and 'tree'
+  if config.options.keymaps.explorer.toggle_view_mode then
+    vim.keymap.set("n", config.options.keymaps.explorer.toggle_view_mode, function()
+      M.toggle_view_mode(explorer)
     end, vim.tbl_extend("force", map_options, { buffer = split.bufnr }))
   end
 
@@ -636,6 +787,25 @@ function M.refresh(explorer)
       
       -- Update tree
       explorer.tree:set_nodes(root_nodes)
+      
+      -- For tree mode, expand directories after setting nodes
+      local explorer_config = config.options.explorer or {}
+      if explorer_config.view_mode == "tree" then
+        local function expand_all_dirs(parent_node)
+          if not parent_node:has_children() then return end
+          for _, child_id in ipairs(parent_node:get_child_ids()) do
+            local child = explorer.tree:get_node(child_id)
+            if child and child.data and child.data.type == "directory" then
+              child:expand()
+              expand_all_dirs(child)
+            end
+          end
+        end
+        for _, node in ipairs(root_nodes) do
+          expand_all_dirs(node)
+        end
+      end
+      
       explorer.tree:render()
       
       -- Update status result for file selection logic
@@ -665,15 +835,23 @@ function M.refresh(explorer)
 end
 
 -- Get flat list of all files from tree (unstaged + staged)
+-- Handles both list mode (flat) and tree mode (nested directories)
 local function get_all_files(tree)
   local files = {}
-  local nodes = tree:get_nodes()
   
-  for _, group_node in ipairs(nodes) do
-    if group_node:is_expanded() and group_node:has_children() then
-      for _, file_node in ipairs(group_node:get_child_ids()) do
-        local node = tree:get_node(file_node)
-        if node and node.data and not node.data.type then
+  -- Recursively collect files from a node and its children
+  local function collect_files(parent_node)
+    if not parent_node:has_children() then return end
+    if not parent_node:is_expanded() then return end
+    
+    for _, child_id in ipairs(parent_node:get_child_ids()) do
+      local node = tree:get_node(child_id)
+      if node and node.data then
+        if node.data.type == "directory" then
+          -- Recurse into directory (tree mode)
+          collect_files(node)
+        elseif not node.data.type then
+          -- It's a file (no type means file node)
           table.insert(files, {
             node = node,
             data = node.data,
@@ -681,6 +859,11 @@ local function get_all_files(tree)
         end
       end
     end
+  end
+  
+  local nodes = tree:get_nodes()
+  for _, group_node in ipairs(nodes) do
+    collect_files(group_node)
   end
   
   return files
@@ -820,6 +1003,23 @@ function M.toggle_visibility(explorer)
       vim.cmd('wincmd =')
     end)
   end
+end
+
+-- Toggle view mode between 'list' and 'tree'
+function M.toggle_view_mode(explorer)
+  if not explorer then return end
+  
+  local explorer_config = config.options.explorer or {}
+  local current_mode = explorer_config.view_mode or "list"
+  local new_mode = (current_mode == "list") and "tree" or "list"
+  
+  -- Update config
+  config.options.explorer.view_mode = new_mode
+  
+  -- Refresh to rebuild tree with new mode
+  M.refresh(explorer)
+  
+  vim.notify("Explorer view: " .. new_mode, vim.log.levels.INFO)
 end
 
 return M
