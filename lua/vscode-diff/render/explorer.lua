@@ -36,6 +36,86 @@ local function get_folder_icon(is_open)
   end
 end
 
+-- Convert glob pattern to Lua pattern
+local function glob_to_pattern(glob)
+  -- Use unique placeholders that won't appear in file paths
+  local DOUBLE_STAR_SLASH = "\001DOUBLESTARSLASH\001"
+  local DOUBLE_STAR = "\001DOUBLESTAR\001"
+  local SINGLE_STAR = "\001SINGLESTAR\001"
+
+  local pattern = glob
+  -- Escape Lua magic characters (except * and ?)
+  pattern = pattern:gsub("([%.%+%-%^%$%(%)%[%]%%])", "%%%1")
+  -- Convert glob wildcards to placeholders first (order matters!)
+  -- Handle **/ specially - it matches zero or more directories
+  pattern = pattern:gsub("%*%*/", DOUBLE_STAR_SLASH)
+  pattern = pattern:gsub("%*%*", DOUBLE_STAR)
+  pattern = pattern:gsub("%*", SINGLE_STAR)
+  pattern = pattern:gsub("%?", ".") -- ? matches single character
+  -- Now convert placeholders to Lua patterns
+  pattern = pattern:gsub(DOUBLE_STAR_SLASH, ".-") -- **/ matches zero or more dirs (including trailing /)
+  pattern = pattern:gsub(DOUBLE_STAR, ".*") -- ** matches anything including /
+  pattern = pattern:gsub(SINGLE_STAR, "[^/]*") -- * matches anything except /
+  return "^" .. pattern .. "$"
+end
+
+-- Check if a file path matches any of the given glob patterns
+-- Follows gitignore-style matching:
+--   *.pb.go      → match basename anywhere
+--   /*.pb.go     → match only in root (leading / anchors)
+--   foo/*.pb.go  → match in foo/ directory
+--   **/*.pb.go   → match anywhere (explicit)
+local function matches_any_pattern(path, patterns)
+  if not patterns or #patterns == 0 then
+    return false
+  end
+  local basename = path:match("([^/]+)$") or path
+  for _, glob in ipairs(patterns) do
+    local match_target
+    local match_pattern
+
+    if glob:sub(1, 1) == "/" then
+      -- Leading / anchors to root - match full path against pattern without /
+      match_target = path
+      match_pattern = glob_to_pattern(glob:sub(2))
+    elseif glob:find("/") then
+      -- Contains / but no leading / - match full path
+      match_target = path
+      match_pattern = glob_to_pattern(glob)
+    else
+      -- No / at all - match basename only (matches anywhere)
+      match_target = basename
+      match_pattern = glob_to_pattern(glob)
+    end
+
+    if match_target:match(match_pattern) then
+      return true
+    end
+  end
+  return false
+end
+
+-- Filter files based on explorer.file_filter config
+-- Returns files that should be shown (not ignored)
+local function filter_files(files)
+  local explorer_config = config.options.explorer or {}
+  local file_filter = explorer_config.file_filter or {}
+  local ignore_patterns = file_filter.ignore or {}
+
+  if #ignore_patterns == 0 then
+    return files
+  end
+
+  local filtered = {}
+  for _, file in ipairs(files) do
+    if not matches_any_pattern(file.path, ignore_patterns) then
+      filtered[#filtered + 1] = file
+    end
+  end
+
+  return filtered
+end
+
 -- Create flat file nodes (list mode)
 local function create_file_nodes(files, git_root, group)
   local nodes = {}
@@ -177,15 +257,19 @@ local function create_tree_data(status_result, git_root, base_revision)
   local explorer_config = config.options.explorer or {}
   local view_mode = explorer_config.view_mode or "list"
 
+  -- Apply file filter before creating nodes
+  local unstaged_files = filter_files(status_result.unstaged)
+  local staged_files = filter_files(status_result.staged)
+
   local create_nodes = (view_mode == "tree") and create_tree_file_nodes or create_file_nodes
-  local unstaged_nodes = create_nodes(status_result.unstaged, git_root, "unstaged")
-  local staged_nodes = create_nodes(status_result.staged, git_root, "staged")
+  local unstaged_nodes = create_nodes(unstaged_files, git_root, "unstaged")
+  local staged_nodes = create_nodes(staged_files, git_root, "staged")
 
   if base_revision then
     -- Revision mode: single group showing all changes
     return {
       Tree.Node({
-        text = string.format("Changes (%d)", #status_result.unstaged),
+        text = string.format("Changes (%d)", #unstaged_files),
         data = { type = "group", name = "unstaged" },
       }, unstaged_nodes),
     }
@@ -193,11 +277,11 @@ local function create_tree_data(status_result, git_root, base_revision)
     -- Status mode: separate staged/unstaged groups
     return {
       Tree.Node({
-        text = string.format("Changes (%d)", #status_result.unstaged),
+        text = string.format("Changes (%d)", #unstaged_files),
         data = { type = "group", name = "unstaged" },
       }, unstaged_nodes),
       Tree.Node({
-        text = string.format("Staged Changes (%d)", #status_result.staged),
+        text = string.format("Staged Changes (%d)", #staged_files),
         data = { type = "group", name = "staged" },
       }, staged_nodes),
     }
@@ -1089,5 +1173,9 @@ function M.toggle_view_mode(explorer)
   
   vim.notify("Explorer view: " .. new_mode, vim.log.levels.INFO)
 end
+
+-- Export internal functions for testing
+M._glob_to_pattern = glob_to_pattern
+M._matches_any_pattern = matches_any_pattern
 
 return M
