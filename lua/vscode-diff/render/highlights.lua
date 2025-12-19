@@ -134,9 +134,21 @@ function M.setup()
     default = true,
   })
 
-  -- Conflict sign in gutter (for merge view) - resolved conflicts
+  -- Conflict sign in gutter (for merge view) - resolved conflicts (generic)
   vim.api.nvim_set_hl(0, "CodeDiffConflictSignResolved", {
     fg = "#6e7681",  -- Gray color for handled/resolved conflict indicator
+    default = true,
+  })
+
+  -- Conflict sign for accepted side (green - this content was chosen)
+  vim.api.nvim_set_hl(0, "CodeDiffConflictSignAccepted", {
+    fg = "#3fb950",  -- Green color (GitHub's success green)
+    default = true,
+  })
+
+  -- Conflict sign for rejected side (red - this content was not chosen)
+  vim.api.nvim_set_hl(0, "CodeDiffConflictSignRejected", {
+    fg = "#f85149",  -- Red color (GitHub's danger red)
     default = true,
   })
 end

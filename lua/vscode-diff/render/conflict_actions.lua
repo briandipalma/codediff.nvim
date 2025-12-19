@@ -71,6 +71,74 @@ local function is_block_active(session, block)
   return true
 end
 
+--- Determine which side was accepted for a resolved conflict block
+--- @param session table The diff session
+--- @param block table The conflict block
+--- @return string|nil "incoming", "current", "both", or nil if unresolved/unknown
+local function get_accepted_side(session, block)
+  if not block.extmark_id then return nil end
+  if is_block_active(session, block) then return nil end  -- Still unresolved
+  
+  -- Get current content from result buffer
+  local mark = vim.api.nvim_buf_get_extmark_by_id(session.result_bufnr, tracking_ns, block.extmark_id, { details = true })
+  if not mark or #mark < 3 then return nil end
+  
+  local start_row = mark[1]
+  local end_row = mark[3].end_row
+  local current_lines = vim.api.nvim_buf_get_lines(session.result_bufnr, start_row, end_row, false)
+  
+  -- Get incoming (left) content
+  local incoming_lines = {}
+  if session.original_bufnr and vim.api.nvim_buf_is_valid(session.original_bufnr) then
+    local left_start = block.output1_range.start_line
+    local left_end = block.output1_range.end_line
+    incoming_lines = vim.api.nvim_buf_get_lines(session.original_bufnr, left_start - 1, left_end - 1, false)
+  end
+  
+  -- Get current (right) content
+  local current_side_lines = {}
+  if session.modified_bufnr and vim.api.nvim_buf_is_valid(session.modified_bufnr) then
+    local right_start = block.output2_range.start_line
+    local right_end = block.output2_range.end_line
+    current_side_lines = vim.api.nvim_buf_get_lines(session.modified_bufnr, right_start - 1, right_end - 1, false)
+  end
+  
+  -- Helper to compare line arrays
+  local function lines_equal(a, b)
+    if #a ~= #b then return false end
+    for i = 1, #a do
+      if a[i] ~= b[i] then return false end
+    end
+    return true
+  end
+  
+  -- Check which side matches
+  local matches_incoming = lines_equal(current_lines, incoming_lines)
+  local matches_current = lines_equal(current_lines, current_side_lines)
+  
+  if matches_incoming and matches_current then
+    return "both"  -- Both sides are the same (shouldn't happen in conflict, but handle it)
+  elseif matches_incoming then
+    return "incoming"
+  elseif matches_current then
+    return "current"
+  else
+    -- Content doesn't match either side exactly (could be "both" concatenated or manual edit)
+    -- Check if it's both sides concatenated
+    local both_lines = {}
+    for _, line in ipairs(incoming_lines) do
+      table.insert(both_lines, line)
+    end
+    for _, line in ipairs(current_side_lines) do
+      table.insert(both_lines, line)
+    end
+    if lines_equal(current_lines, both_lines) then
+      return "both"
+    end
+    return "edited"  -- Manual edit or unknown
+  end
+end
+
 --- Find which conflict block the cursor is in
 --- @param session table The diff session
 --- @param cursor_line number 1-based line number
@@ -231,17 +299,44 @@ function M.refresh_all_conflict_signs(session)
   -- Update signs for each block based on is_block_active state
   for _, block in ipairs(session.conflict_blocks) do
     local is_active = is_block_active(session, block)
-    local hl_group = is_active and "CodeDiffConflictSign" or "CodeDiffConflictSignResolved"
+    
+    -- Determine highlight groups for left/right/result based on accepted side
+    local left_hl, right_hl, result_hl
+    if is_active then
+      -- Unresolved: all orange
+      left_hl = "CodeDiffConflictSign"
+      right_hl = "CodeDiffConflictSign"
+      result_hl = "CodeDiffConflictSign"
+    else
+      -- Resolved: check which side was accepted
+      local accepted = get_accepted_side(session, block)
+      if accepted == "incoming" then
+        left_hl = "CodeDiffConflictSignAccepted"   -- Green (chosen)
+        right_hl = "CodeDiffConflictSignRejected"  -- Red (not chosen)
+      elseif accepted == "current" then
+        left_hl = "CodeDiffConflictSignRejected"   -- Red (not chosen)
+        right_hl = "CodeDiffConflictSignAccepted"  -- Green (chosen)
+      elseif accepted == "both" then
+        left_hl = "CodeDiffConflictSignAccepted"   -- Green (both chosen)
+        right_hl = "CodeDiffConflictSignAccepted"  -- Green (both chosen)
+      else
+        -- Manual edit or unknown - use gray
+        left_hl = "CodeDiffConflictSignResolved"
+        right_hl = "CodeDiffConflictSignResolved"
+      end
+      -- Result buffer always uses gray for resolved
+      result_hl = "CodeDiffConflictSignResolved"
+    end
     
     -- Update left buffer (incoming)
     local left_start = block.output1_range.start_line - 1
     local left_end = block.output1_range.end_line - 1
-    set_signs_for_range(session.original_bufnr, left_start, left_end, ns_conflict, hl_group, is_active)
+    set_signs_for_range(session.original_bufnr, left_start, left_end, ns_conflict, left_hl, is_active)
     
     -- Update right buffer (current)
     local right_start = block.output2_range.start_line - 1
     local right_end = block.output2_range.end_line - 1
-    set_signs_for_range(session.modified_bufnr, right_start, right_end, ns_conflict, hl_group, is_active)
+    set_signs_for_range(session.modified_bufnr, right_start, right_end, ns_conflict, right_hl, is_active)
     
     -- Update result buffer (use tracked extmark position)
     if session.result_bufnr and vim.api.nvim_buf_is_valid(session.result_bufnr) and block.extmark_id then
@@ -256,7 +351,7 @@ function M.refresh_all_conflict_signs(session)
           if result_start >= 0 and result_start < line_count then
             vim.api.nvim_buf_set_extmark(session.result_bufnr, result_signs_ns, result_start, 0, {
               sign_text = "▔▔",  -- Upper block - appears at top of line, like between two lines
-              sign_hl_group = hl_group,
+              sign_hl_group = result_hl,
               priority = 50,
             })
           end
@@ -265,7 +360,7 @@ function M.refresh_all_conflict_signs(session)
             if line >= 0 and line < line_count then
               vim.api.nvim_buf_set_extmark(session.result_bufnr, result_signs_ns, line, 0, {
                 sign_text = "▌",
-                sign_hl_group = hl_group,
+                sign_hl_group = result_hl,
                 priority = 50,
               })
             end
