@@ -8,8 +8,12 @@ local config = require("vscode-diff.config")
 -- Will be injected by init.lua
 local nodes_module = nil
 local tree_module = nil
+local refresh_module = nil
+local actions_module = nil
 M._set_nodes_module = function(n) nodes_module = n end
 M._set_tree_module = function(t) tree_module = t end
+M._set_refresh_module = function(r) refresh_module = r end
+M._set_actions_module = function(a) actions_module = a end
 
 function M.create(status_result, git_root, tabpage, width, base_revision, target_revision)
   -- Get explorer position and size from config
@@ -374,14 +378,14 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
   -- Refresh explorer (R key)
   if config.options.keymaps.explorer.refresh then
     vim.keymap.set("n", config.options.keymaps.explorer.refresh, function()
-      M.refresh(explorer)
+      refresh_module.refresh(explorer)
     end, vim.tbl_extend("force", map_options, { buffer = split.bufnr }))
   end
 
   -- Toggle view mode (i key) - switch between 'list' and 'tree'
   if config.options.keymaps.explorer.toggle_view_mode then
     vim.keymap.set("n", config.options.keymaps.explorer.toggle_view_mode, function()
-      M.toggle_view_mode(explorer)
+      actions_module.toggle_view_mode(explorer)
     end, vim.tbl_extend("force", map_options, { buffer = split.bufnr }))
   end
 
@@ -426,7 +430,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
   end
   
   -- Setup auto-refresh
-  M.setup_auto_refresh(explorer, tabpage)
+  refresh_module.setup_auto_refresh(explorer, tabpage)
   
   -- Re-render on window resize for dynamic width
   vim.api.nvim_create_autocmd('WinResized', {

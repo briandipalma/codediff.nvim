@@ -14,6 +14,8 @@ local actions = require("vscode-diff.ui.explorer.actions")
 tree_module._set_nodes_module(nodes)
 render._set_nodes_module(nodes)
 render._set_tree_module(tree_module)
+render._set_refresh_module(refresh)
+render._set_actions_module(actions)
 refresh._set_tree_module(tree_module)
 actions._set_refresh_module(refresh)
 
