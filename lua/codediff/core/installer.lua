@@ -3,11 +3,10 @@
 
 local M = {}
 
--- Get the plugin root directory
--- Navigates from lua/vscode-diff/installer.lua -> lua/vscode-diff/ -> lua/ -> plugin root
+-- Get the plugin root directory using shared path utility
+local path_util = require("codediff.core.path")
 local function get_plugin_root()
-  local source = debug.getinfo(1).source:sub(2)
-  return vim.fn.fnamemodify(source, ":h:h:h")
+  return path_util.get_plugin_root()
 end
 
 -- Detect OS

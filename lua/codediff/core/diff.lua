@@ -19,7 +19,8 @@ else
 end
 
 -- Build versioned library filename
-local plugin_root = vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":h:h:h")
+local path_util = require("codediff.core.path")
+local plugin_root = path_util.get_plugin_root()
 local lib_name = string.format("libvscode_diff_%s.%s", VERSION, lib_ext)
 local lib_path = plugin_root .. "/" .. lib_name
 
