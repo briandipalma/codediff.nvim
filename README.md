@@ -279,6 +279,15 @@ Compare two arbitrary files side-by-side:
 :CodeDiff file file_a.txt file_b.txt
 ```
 
+### Git Merge Tool
+
+Use CodeDiff as your git merge tool for resolving conflicts:
+
+```bash
+git config --global merge.tool codediff
+git config --global mergetool.codediff.cmd 'nvim "$MERGED" -c "CodeDiff merge \"$MERGED\""'
+```
+
 ### Lua API
 
 ```lua
