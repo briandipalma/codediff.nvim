@@ -62,6 +62,11 @@ local function cleanup_diff(tabpage)
         pcall(vim.keymap.del, 'n', key, { buffer = diff.explorer.bufnr })
       end
     end
+    
+    -- Call explorer's cleanup function to stop file watchers
+    if diff.explorer._cleanup_auto_refresh then
+      pcall(diff.explorer._cleanup_auto_refresh)
+    end
   end
 
   -- Send didClose notifications for virtual buffers
