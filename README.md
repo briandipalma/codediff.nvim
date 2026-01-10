@@ -306,6 +306,24 @@ git config --global merge.tool codediff
 git config --global mergetool.codediff.cmd 'nvim "$MERGED" -c "CodeDiff merge \"$MERGED\""'
 ```
 
+### Git Diff Tool
+
+Use CodeDiff as your git diff tool for viewing changes:
+
+```bash
+git config --global diff.tool codediff
+git config --global difftool.codediff.cmd 'nvim "$LOCAL" "$REMOTE" +"CodeDiff file $LOCAL $REMOTE"'
+```
+
+Then use `git difftool` to view diffs:
+
+```bash
+git difftool                      # View all uncommitted changes
+git difftool HEAD~2 HEAD          # Compare two commits
+git difftool main feature-branch  # Compare branches
+git difftool -y                   # Skip confirmation prompts
+```
+
 ### Lua API
 
 ```lua
