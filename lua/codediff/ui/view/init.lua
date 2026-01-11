@@ -48,8 +48,10 @@ function M.create(session_config, filetype, on_ready)
 
   local original_win, modified_win, original_info, modified_info, initial_buf
 
-  -- Split command: "vsplit" puts new window right, "leftabove vsplit" puts it left
-  local split_cmd = config.options.diff.original_position == "right" and "leftabove vsplit" or "vsplit"
+  -- Split command: Use explicit positioning to ignore user's splitright setting
+  -- "rightbelow vsplit" puts new window on RIGHT, "leftabove vsplit" puts it on LEFT
+  -- We want modified (new) on RIGHT when original_position == "left"
+  local split_cmd = config.options.diff.original_position == "right" and "leftabove vsplit" or "rightbelow vsplit"
 
   if is_explorer_placeholder then
     -- Explorer mode: Create empty split panes, skip buffer loading
