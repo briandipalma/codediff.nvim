@@ -610,11 +610,21 @@ end
 --   { hash, short_hash, author, date, date_relative, subject, ref_names, files_changed, insertions, deletions }
 function M.get_commit_list(range, git_root, opts, callback)
   opts = opts or {}
+  local is_single_file = opts.path and opts.path ~= ""
+  
   local args = {
     "log",
     "--pretty=format:%H%x00%h%x00%an%x00%at%x00%ar%x00%s%x00%D%x00",
-    "--shortstat",
   }
+
+  -- For single file mode, use --numstat to get stats AND file path (for renames)
+  -- For multi-file mode, use --shortstat for aggregate stats
+  if is_single_file then
+    table.insert(args, "--numstat")
+    table.insert(args, "--follow")
+  else
+    table.insert(args, "--shortstat")
+  end
 
   if opts.no_merges then
     table.insert(args, "--no-merges")
@@ -633,7 +643,7 @@ function M.get_commit_list(range, git_root, opts, callback)
     table.insert(args, range)
   end
 
-  if opts.path then
+  if is_single_file then
     table.insert(args, "--")
     table.insert(args, opts.path)
   end
@@ -668,7 +678,34 @@ function M.get_commit_list(range, git_root, opts, callback)
             files_changed = 0,
             insertions = 0,
             deletions = 0,
+            file_path = nil, -- Actual file path at this commit (for --follow)
           }
+        end
+      elseif current_commit and line:match("^%d+%s+%d+%s+") then
+        -- Parse numstat line: "40\t12\tpath" or "0\t0\tlua/{old => new}/file.lua"
+        local ins, del, path = line:match("^(%d+)%s+(%d+)%s+(.+)$")
+        if ins and del and path then
+          current_commit.insertions = (current_commit.insertions or 0) + tonumber(ins)
+          current_commit.deletions = (current_commit.deletions or 0) + tonumber(del)
+          current_commit.files_changed = (current_commit.files_changed or 0) + 1
+          -- Extract actual file path, handling rename notation like "lua/{old => new}/file.lua"
+          -- For renames, extract the old path (before =>)
+          if path:match("{.*=>.*}") then
+            -- Rename notation: extract old path
+            -- Examples: "lua/{vscode-diff => codediff}/file.lua" or "lua/vscode-diff/{ => core}/git.lua"
+            local prefix, old, _, suffix = path:match("^(.*)%{(.-)%s*=>%s*(.-)%}(.*)$")
+            if prefix then
+              -- Remove trailing slash from prefix if old is empty (move into subdir)
+              if old == "" and prefix:sub(-1) == "/" then
+                prefix = prefix:sub(1, -2)
+              end
+              current_commit.file_path = prefix .. old .. suffix
+            else
+              current_commit.file_path = path
+            end
+          else
+            current_commit.file_path = path
+          end
         end
       elseif current_commit and line:match("%d+ file") then
         -- Parse shortstat line: " 3 files changed, 32 insertions(+), 8 deletions(-)"

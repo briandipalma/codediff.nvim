@@ -115,6 +115,8 @@ function M.create(commits, git_root, tabpage, width, opts)
         file_count = commit.files_changed, -- Use files_changed as initial count
         git_root = git_root,
         files_loaded = false,
+        -- File path at this commit (for single file mode with renames)
+        file_path = commit.file_path,
         -- Alignment info
         max_files_width = max_files_width,
         max_ins_width = max_ins_width,
@@ -299,8 +301,10 @@ function M.create(commits, git_root, tabpage, width, opts)
       if node.data and node.data.type == "commit" then
         if is_single_file_mode then
           -- Single file mode: directly show diff for the file at this commit
+          -- Use file_path from commit data if available (handles renames), fallback to opts.file_path
+          local file_path = node.data.file_path or opts.file_path
           local file_data = {
-            path = opts.file_path,
+            path = file_path,
             commit_hash = node.data.hash,
             git_root = git_root,
           }
@@ -329,8 +333,10 @@ function M.create(commits, git_root, tabpage, width, opts)
     elseif node.data and node.data.type == "commit" then
       if is_single_file_mode then
         -- Single file mode: directly show diff for the file at this commit
+        -- Use file_path from commit data if available (handles renames), fallback to opts.file_path
+        local file_path = node.data.file_path or opts.file_path
         local file_data = {
-          path = opts.file_path,
+          path = file_path,
           commit_hash = node.data.hash,
           git_root = git_root,
         }
@@ -363,8 +369,10 @@ function M.create(commits, git_root, tabpage, width, opts)
     vim.defer_fn(function()
       if is_single_file_mode then
         -- Single file mode: directly select the file at first commit
+        -- Use file_path from commit data if available (handles renames), fallback to opts.file_path
+        local file_path = first_commit_node.data.file_path or opts.file_path
         local file_data = {
-          path = opts.file_path,
+          path = file_path,
           commit_hash = first_commit_node.data.hash,
           git_root = git_root,
         }

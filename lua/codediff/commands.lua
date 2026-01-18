@@ -531,16 +531,38 @@ function M.vscode_diff(opts)
   elseif subcommand == "history" then
     -- :CodeDiff history [range] [file]
     -- Examples:
-    --   :CodeDiff history                    - last 50 commits
+    --   :CodeDiff history                    - last 100 commits
     --   :CodeDiff history HEAD~10            - last 10 commits
     --   :CodeDiff history origin/main..HEAD  - commits in range
     --   :CodeDiff history HEAD~10 %          - last 10 commits for current file
-    local range = args[2]
-    local file_path = args[3]
+    --   :CodeDiff history %                  - history for current file
+    --   :CodeDiff history path/to/file.lua   - history for specific file
+    local arg1 = args[2]
+    local arg2 = args[3]
+    local range = nil
+    local file_path = nil
 
-    -- Handle % as current file
-    if file_path == "%" then
-      file_path = vim.api.nvim_buf_get_name(0)
+    -- Helper to expand path (handles % and normal paths)
+    local function expand_path(p)
+      if p == "%" then
+        return vim.api.nvim_buf_get_name(0)
+      else
+        return vim.fn.expand(p)
+      end
+    end
+
+    if arg1 and arg2 then
+      -- Two params: first is range, second is file_path
+      range = arg1
+      file_path = expand_path(arg2)
+    elseif arg1 then
+      -- One param: try as file_path first, otherwise treat as range
+      local expanded = expand_path(arg1)
+      if vim.fn.filereadable(expanded) == 1 then
+        file_path = expanded
+      else
+        range = arg1
+      end
     end
 
     handle_history(range, file_path)
