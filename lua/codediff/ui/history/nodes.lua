@@ -71,6 +71,149 @@ function M.create_commit_node(commit, files, git_root)
   }, file_nodes)
 end
 
+-- Create flat list file nodes for a commit
+-- files: array of { path, status, old_path }
+-- commit_hash: the commit hash these files belong to
+-- git_root: absolute path to git repository root
+function M.create_list_file_nodes(files, commit_hash, git_root)
+  local file_nodes = {}
+
+  for i, file in ipairs(files) do
+    local icon, icon_color = M.get_file_icon(file.path)
+    local status_info = STATUS_SYMBOLS[file.status] or { symbol = file.status, color = "Normal" }
+
+    file_nodes[#file_nodes + 1] = Tree.Node({
+      id = "file:" .. commit_hash .. ":" .. file.path,
+      text = file.path,
+      data = {
+        type = "file",
+        path = file.path,
+        old_path = file.old_path,
+        status = file.status,
+        icon = icon,
+        icon_color = icon_color,
+        status_symbol = status_info.symbol,
+        status_color = status_info.color,
+        git_root = git_root,
+        commit_hash = commit_hash,
+        is_last = i == #files,
+        indent_state = { i == #files },
+      },
+    })
+  end
+
+  return file_nodes
+end
+
+-- Create tree file nodes for a commit (organized by directory)
+-- files: array of { path, status, old_path }
+-- commit_hash: the commit hash these files belong to
+-- git_root: absolute path to git repository root
+function M.create_tree_file_nodes(files, commit_hash, git_root)
+  -- Build directory structure
+  local dir_tree = {}
+
+  for _, file in ipairs(files) do
+    local parts = {}
+    for part in file.path:gmatch("[^/]+") do
+      parts[#parts + 1] = part
+    end
+
+    local current = dir_tree
+    for i = 1, #parts - 1 do
+      local dir_name = parts[i]
+      if not current[dir_name] then
+        current[dir_name] = { _is_dir = true, _children = {} }
+      end
+      current = current[dir_name]._children
+    end
+
+    -- Add file at leaf
+    local filename = parts[#parts]
+    current[filename] = {
+      _is_dir = false,
+      _file = file,
+    }
+  end
+
+  -- Convert to Tree.Node recursively
+  local function build_nodes(subtree, parent_path, indent_state)
+    local nodes = {}
+    local sorted_keys = {}
+
+    for key in pairs(subtree) do
+      sorted_keys[#sorted_keys + 1] = key
+    end
+    -- Sort: directories first, then files, alphabetically
+    table.sort(sorted_keys, function(a, b)
+      local a_is_dir = subtree[a]._is_dir
+      local b_is_dir = subtree[b]._is_dir
+      if a_is_dir ~= b_is_dir then
+        return a_is_dir
+      end
+      return a < b
+    end)
+
+    local total = #sorted_keys
+    for idx, key in ipairs(sorted_keys) do
+      local item = subtree[key]
+      local full_path = parent_path ~= "" and (parent_path .. "/" .. key) or key
+      local is_last = (idx == total)
+
+      -- Copy parent indent state and add current level
+      local node_indent_state = {}
+      for i, v in ipairs(indent_state) do
+        node_indent_state[i] = v
+      end
+      node_indent_state[#node_indent_state + 1] = is_last
+
+      if item._is_dir then
+        -- Directory node
+        local children = build_nodes(item._children, full_path, node_indent_state)
+        nodes[#nodes + 1] = Tree.Node({
+          id = "dir:" .. commit_hash .. ":" .. full_path,
+          text = key,
+          data = {
+            type = "directory",
+            name = key,
+            dir_path = full_path,
+            commit_hash = commit_hash,
+            git_root = git_root,
+            indent_state = node_indent_state,
+          },
+        }, children)
+      else
+        -- File node
+        local file = item._file
+        local icon, icon_color = M.get_file_icon(file.path)
+        local status_info = STATUS_SYMBOLS[file.status] or { symbol = file.status, color = "Normal" }
+
+        nodes[#nodes + 1] = Tree.Node({
+          id = "file:" .. commit_hash .. ":" .. file.path,
+          text = key,
+          data = {
+            type = "file",
+            path = file.path,
+            old_path = file.old_path,
+            status = file.status,
+            icon = icon,
+            icon_color = icon_color,
+            status_symbol = status_info.symbol,
+            status_color = status_info.color,
+            git_root = git_root,
+            commit_hash = commit_hash,
+            indent_state = node_indent_state,
+          },
+        })
+      end
+    end
+
+    return nodes
+  end
+
+  return build_nodes(dir_tree, "", {})
+end
+
 -- Prepare node for rendering (format display)
 -- Match diffview format: [fold] [file count] | [adds] [dels] | hash subject author, date
 function M.prepare_node(node, max_width, selected_commit, selected_file)
@@ -181,9 +324,19 @@ function M.prepare_node(node, max_width, selected_commit, selected_file)
       return combined_name
     end
 
-    -- Tree line character (diffview uses └ for last, │ for others)
-    local tree_char = data.is_last and "└   " or "│   "
-    line:append(tree_char, get_hl("Comment"))
+    -- Build tree line characters from indent_state (match explorer: 2-char per level)
+    local indent_str = ""
+    local indent_state = data.indent_state or {}
+    for i, is_last in ipairs(indent_state) do
+      if i == #indent_state then
+        -- Current level - last item uses └, others use ├
+        indent_str = indent_str .. (is_last and "└ " or "├ ")
+      else
+        -- Parent levels - use │ if parent wasn't last, space otherwise
+        indent_str = indent_str .. (is_last and "  " or "│ ")
+      end
+    end
+    line:append(indent_str, get_hl("Comment"))
 
     -- Status symbol
     line:append(data.status_symbol .. " ", get_hl(data.status_color))
@@ -193,18 +346,22 @@ function M.prepare_node(node, max_width, selected_commit, selected_file)
       line:append(data.icon .. " ", get_hl(data.icon_color))
     end
 
-    -- Split path into directory and filename
-    local full_path = data.path
-    local filename = full_path:match("([^/]+)$") or full_path
-    local directory = full_path:sub(1, -(#filename + 2))
-
-    -- Directory path (dimmed)
-    if #directory > 0 then
-      line:append(directory .. "/", get_hl("Comment"))
+    -- In tree mode, just show filename; in list mode, show full path
+    local filename
+    if #indent_state > 1 then
+      -- Tree mode: just filename
+      filename = data.path:match("([^/]+)$") or data.path
+      line:append(filename, get_hl("Normal"))
+    else
+      -- List mode: show full path with directory dimmed
+      local full_path = data.path
+      filename = full_path:match("([^/]+)$") or full_path
+      local directory = full_path:sub(1, -(#filename + 2))
+      if #directory > 0 then
+        line:append(directory .. "/", get_hl("Comment"))
+      end
+      line:append(filename, get_hl("Normal"))
     end
-
-    -- Filename
-    line:append(filename, get_hl("Normal"))
 
     -- Pad with spaces to fill full line width when selected
     if is_selected and max_width then
@@ -213,6 +370,35 @@ function M.prepare_node(node, max_width, selected_commit, selected_file)
         line:append(string.rep(" ", max_width - current_len), get_hl("Normal"))
       end
     end
+
+  elseif data.type == "directory" then
+    -- Directory node format (tree mode only):
+    -- [tree chars] [folder icon] [name]
+    local function get_hl(default)
+      return default or "Normal"
+    end
+
+    -- Build tree line characters from indent_state (match explorer: 2-char per level)
+    local indent_str = ""
+    local indent_state = data.indent_state or {}
+    for i, is_last in ipairs(indent_state) do
+      if i == #indent_state then
+        indent_str = indent_str .. (is_last and "└ " or "├ ")
+      else
+        indent_str = indent_str .. (is_last and "  " or "│ ")
+      end
+    end
+    line:append(indent_str, get_hl("Comment"))
+
+    -- Folder icon
+    local explorer_config = config.options.explorer or {}
+    local icons = explorer_config.icons or {}
+    local is_expanded = node:is_expanded()
+    local folder_icon = is_expanded and (icons.folder_open or "") or (icons.folder_closed or "")
+    line:append(folder_icon .. " ", get_hl("Directory"))
+
+    -- Directory name
+    line:append(data.name, get_hl("Directory"))
   end
 
   return line

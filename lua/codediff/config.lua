@@ -59,6 +59,7 @@ M.defaults = {
     width = 40, -- Width when position is "left" (columns)
     height = 15, -- Height when position is "bottom" (lines)
     initial_focus = "history", -- Initial focus: "history", "original", or "modified"
+    view_mode = "list", -- "list" or "tree" for files under commits
   },
 
   -- Keymaps
@@ -82,6 +83,10 @@ M.defaults = {
       stage_all = "S", -- Stage all files
       unstage_all = "U", -- Unstage all files
       restore = "X", -- Discard changes to file (restore to index/HEAD)
+    },
+    history = {
+      select = "<CR>", -- Select commit/file or toggle expand
+      toggle_view_mode = "i", -- Toggle between 'list' and 'tree' views
     },
     -- Conflict mode keymaps (only active in merge conflict views)
     conflict = {

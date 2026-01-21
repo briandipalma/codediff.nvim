@@ -117,6 +117,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         width = 40,           -- Width when position is "left" (columns)
         height = 15,          -- Height when position is "bottom" (lines)
         initial_focus = "history",  -- Initial focus: "history", "original", or "modified"
+        view_mode = "list",   -- "list" or "tree" for files under commits
       },
 
       -- Keymaps in diff view
@@ -140,6 +141,10 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
           stage_all = "S",    -- Stage all files
           unstage_all = "U",  -- Unstage all files
           restore = "X",      -- Discard changes (restore file)
+        },
+        history = {
+          select = "<CR>",    -- Select commit/file or toggle expand
+          toggle_view_mode = "i",  -- Toggle between 'list' and 'tree' views
         },
         conflict = {
           accept_incoming = "<leader>ct",  -- Accept incoming (theirs/left) change
@@ -330,6 +335,9 @@ Review commits on a per-commit basis:
 ```
 
 The history panel shows a list of commits. Each commit can be expanded to show its changed files. Select a file to view the diff between the commit and its parent (`commit^` vs `commit`).
+
+**History Keymaps:**
+- `i` - Toggle between list and tree view for files under commits
 
 ### Git Merge Tool
 

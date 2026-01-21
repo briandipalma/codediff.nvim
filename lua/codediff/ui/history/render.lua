@@ -6,6 +6,7 @@ local Split = require("nui.split")
 local config = require("codediff.config")
 local git = require("codediff.core.git")
 local nodes_module = require("codediff.ui.history.nodes")
+local keymaps_module = require("codediff.ui.history.keymaps")
 
 -- Create file history panel
 -- commits: array of commit objects from git.get_commit_list
@@ -200,36 +201,15 @@ function M.create(commits, git_root, tabpage, width, opts)
       end
 
       vim.schedule(function()
-        -- Create file nodes
-        -- Use commit_hash:path as unique ID to avoid duplicates across commits
-        local file_nodes = {}
-        for i, file in ipairs(files) do
-          local icon, icon_color = nodes_module.get_file_icon(file.path)
-          local STATUS_SYMBOLS = {
-            M = { symbol = "M", color = "DiagnosticWarn" },
-            A = { symbol = "A", color = "DiagnosticOk" },
-            D = { symbol = "D", color = "DiagnosticError" },
-            R = { symbol = "R", color = "DiagnosticInfo" },
-          }
-          local status_info = STATUS_SYMBOLS[file.status] or { symbol = file.status, color = "Normal" }
-
-          file_nodes[#file_nodes + 1] = Tree.Node({
-            id = "file:" .. data.hash .. ":" .. file.path,
-            text = file.path,
-            data = {
-              type = "file",
-              path = file.path,
-              old_path = file.old_path,
-              status = file.status,
-              icon = icon,
-              icon_color = icon_color,
-              status_symbol = status_info.symbol,
-              status_color = status_info.color,
-              git_root = git_root,
-              commit_hash = data.hash,
-              is_last = i == #files,
-            },
-          })
+        -- Create file nodes based on view_mode
+        local history_config = config.options.history or {}
+        local view_mode = history_config.view_mode or "list"
+        
+        local file_nodes
+        if view_mode == "tree" then
+          file_nodes = nodes_module.create_tree_file_nodes(files, data.hash, git_root)
+        else
+          file_nodes = nodes_module.create_list_file_nodes(files, data.hash, git_root)
         end
 
         -- Update node with children
@@ -240,6 +220,20 @@ function M.create(commits, git_root, tabpage, width, opts)
         -- For now, we'll use set_nodes on the commit node
         for _, file_node in ipairs(file_nodes) do
           tree:add_node(file_node, commit_node:get_id())
+        end
+
+        -- Auto-expand all directory nodes in tree mode
+        if view_mode == "tree" then
+          local function expand_directories(node_ids)
+            for _, node_id in ipairs(node_ids) do
+              local node = tree:get_node(node_id)
+              if node and node.data and node.data.type == "directory" then
+                node:expand()
+                expand_directories(node:get_child_ids() or {})
+              end
+            end
+          end
+          expand_directories(commit_node:get_child_ids() or {})
         end
 
         commit_node:expand()
@@ -302,82 +296,16 @@ function M.create(commits, git_root, tabpage, width, opts)
     on_file_select(file_data)
   end
 
-  -- Keymaps
-  local map_options = { noremap = true, silent = true, nowait = true }
-
-  -- Toggle expand/collapse or select file
-  if config.options.keymaps.explorer.select then
-    vim.keymap.set("n", config.options.keymaps.explorer.select, function()
-      local node = tree:get_node()
-      if not node then
-        return
-      end
-
-      if node.data and node.data.type == "commit" then
-        if is_single_file_mode then
-          -- Single file mode: directly show diff for the file at this commit
-          -- Use file_path from commit data if available (handles renames), fallback to opts.file_path
-          local file_path = node.data.file_path or opts.file_path
-          local file_data = {
-            path = file_path,
-            commit_hash = node.data.hash,
-            git_root = git_root,
-          }
-          history.on_file_select(file_data)
-        elseif node:is_expanded() then
-          node:collapse()
-          tree:render()
-        else
-          -- Load files and expand
-          load_commit_files(node)
-        end
-      elseif node.data and node.data.type == "file" then
-        history.on_file_select(node.data)
-      end
-    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Select/toggle entry" }))
-  end
-
-  -- Double-click support
-  vim.keymap.set("n", "<2-LeftMouse>", function()
-    local node = tree:get_node()
-    if not node then
-      return
-    end
-    if node.data and node.data.type == "file" then
-      history.on_file_select(node.data)
-    elseif node.data and node.data.type == "commit" then
-      if is_single_file_mode then
-        -- Single file mode: directly show diff for the file at this commit
-        -- Use file_path from commit data if available (handles renames), fallback to opts.file_path
-        local file_path = node.data.file_path or opts.file_path
-        local file_data = {
-          path = file_path,
-          commit_hash = node.data.hash,
-          git_root = git_root,
-        }
-        history.on_file_select(file_data)
-      elseif node:is_expanded() then
-        node:collapse()
-        tree:render()
-      else
-        load_commit_files(node)
-      end
-    end
-  end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Select file" }))
-
-  -- Navigate to next file
-  if config.options.keymaps.view.next_file then
-    vim.keymap.set("n", config.options.keymaps.view.next_file, function()
-      M.navigate_next(history)
-    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Next file" }))
-  end
-
-  -- Navigate to previous file
-  if config.options.keymaps.view.prev_file then
-    vim.keymap.set("n", config.options.keymaps.view.prev_file, function()
-      M.navigate_prev(history)
-    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Previous file" }))
-  end
+  -- Setup keymaps
+  keymaps_module.setup(history, {
+    is_single_file_mode = is_single_file_mode,
+    file_path = opts.file_path,
+    git_root = git_root,
+    load_commit_files = load_commit_files,
+    navigate_next = M.navigate_next,
+    navigate_prev = M.navigate_prev,
+    nodes_module = nodes_module,
+  })
 
   -- Auto-expand first commit and select first file
   if first_commit_node then
@@ -396,12 +324,30 @@ function M.create(commits, git_root, tabpage, width, opts)
         -- Multi-file mode: expand first commit and select first file
         load_commit_files(first_commit_node, function()
           if first_commit_node:has_children() then
-            local child_ids = first_commit_node:get_child_ids()
-            if #child_ids > 0 then
-              local first_file = tree:get_node(child_ids[1])
-              if first_file and first_file.data then
-                history.on_file_select(first_file.data)
+            -- Find first file node (may need to traverse directories in tree mode)
+            local function find_first_file(node_ids)
+              for _, node_id in ipairs(node_ids) do
+                local node = tree:get_node(node_id)
+                if node and node.data then
+                  if node.data.type == "file" then
+                    return node
+                  elseif node.data.type == "directory" then
+                    -- Expand directory and search its children
+                    node:expand()
+                    local child_file = find_first_file(node:get_child_ids() or {})
+                    if child_file then
+                      return child_file
+                    end
+                  end
+                end
               end
+              return nil
+            end
+
+            local first_file = find_first_file(first_commit_node:get_child_ids() or {})
+            if first_file and first_file.data then
+              tree:render()
+              history.on_file_select(first_file.data)
             end
           end
         end)
