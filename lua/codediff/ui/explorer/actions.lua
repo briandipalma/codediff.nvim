@@ -306,7 +306,7 @@ function M.unstage_all(explorer)
   end)
 end
 
--- Restore/discard changes to the selected file
+-- Restore/discard changes to the selected file or directory
 function M.restore_entry(explorer, tree)
   if not explorer or not explorer.git_root then
     vim.notify("Restore only available in git mode", vim.log.levels.WARN)
@@ -314,13 +314,19 @@ function M.restore_entry(explorer, tree)
   end
 
   local node = tree:get_node()
-  if not node or not node.data or node.data.type == "group" or node.data.type == "directory" then
+  if not node or not node.data or node.data.type == "group" then
     return
   end
 
-  local file_path = node.data.path
+  local entry_type = node.data.type
+  local is_directory = entry_type == "directory"
+  local entry_path = is_directory and node.data.dir_path or node.data.path
   local group = node.data.group
   local status = node.data.status
+
+  if not entry_path then
+    return
+  end
 
   -- Only restore unstaged changes (working tree changes)
   if group ~= "unstaged" then
@@ -328,12 +334,16 @@ function M.restore_entry(explorer, tree)
     return
   end
 
-  local is_untracked = status == "??"
+  -- For directories, we don't have a single status, so assume mixed
+  -- For files, check if untracked
+  local is_untracked = not is_directory and status == "??"
+  local display_name = entry_path .. (is_directory and "/" or "")
 
   -- Two-line confirmation prompt
+  local action_word = is_directory and "Discard all changes in " or (is_untracked and "Delete " or "Discard changes to ")
   vim.api.nvim_echo({
-    { is_untracked and "Delete " or "Discard changes to ", "WarningMsg" },
-    { file_path, "WarningMsg" },
+    { action_word, "WarningMsg" },
+    { display_name, "WarningMsg" },
     { "?\n", "WarningMsg" },
     { "(D)", "WarningMsg" },
     { is_untracked and "elete, " or "iscard, ", "WarningMsg" },
@@ -345,7 +355,8 @@ function M.restore_entry(explorer, tree)
 
   if char == "d" then
     if is_untracked then
-      git.delete_untracked(explorer.git_root, file_path, function(err)
+      -- Delete untracked file (directories with untracked files need -fd flag)
+      git.delete_untracked(explorer.git_root, entry_path, function(err)
         if err then
           vim.schedule(function()
             vim.notify(err, vim.log.levels.ERROR)
@@ -353,7 +364,8 @@ function M.restore_entry(explorer, tree)
         end
       end)
     else
-      git.restore_file(explorer.git_root, file_path, function(err)
+      -- Restore tracked file/directory
+      git.restore_file(explorer.git_root, entry_path, function(err)
         if err then
           vim.schedule(function()
             vim.notify(err, vim.log.levels.ERROR)
