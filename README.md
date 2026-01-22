@@ -131,13 +131,13 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
           prev_file = "[f",   -- Previous file in explorer mode
           diff_get = "do",    -- Get change from other buffer (like vimdiff)
           diff_put = "dp",    -- Put change to other buffer (like vimdiff)
+          toggle_stage = "-", -- Stage/unstage current file (works in explorer and diff buffers)
         },
         explorer = {
           select = "<CR>",    -- Open diff for selected file
           hover = "K",        -- Show file diff preview
           refresh = "R",      -- Refresh git status
           toggle_view_mode = "i",  -- Toggle between 'list' and 'tree' views
-          toggle_stage = "-", -- Stage/unstage selected file
           stage_all = "S",    -- Stage all files
           unstage_all = "U",  -- Unstage all files
           restore = "X",      -- Discard changes (restore file)
