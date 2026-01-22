@@ -141,13 +141,6 @@ function M.setup(explorer)
     end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Toggle list/tree view" }))
   end
 
-  -- Toggle stage/unstage (- key, like diffview)
-  if explorer_keymaps.toggle_stage then
-    vim.keymap.set("n", explorer_keymaps.toggle_stage, function()
-      actions_module.toggle_stage_entry(explorer, tree)
-    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Toggle stage/unstage" }))
-  end
-
   -- Stage all files (S key)
   if explorer_keymaps.stage_all then
     vim.keymap.set("n", explorer_keymaps.stage_all, function()

@@ -73,13 +73,13 @@ M.defaults = {
       prev_file = "[f",
       diff_get = "do", -- Get change from other buffer (like vimdiff)
       diff_put = "dp", -- Put change to other buffer (like vimdiff)
+      toggle_stage = "-", -- Stage/unstage current file (works in explorer and diff buffers)
     },
     explorer = {
       select = "<CR>",
       hover = "K",
       refresh = "R",
       toggle_view_mode = "i", -- Toggle between 'list' and 'tree' views
-      toggle_stage = "-", -- Stage/unstage selected file (like diffview)
       stage_all = "S", -- Stage all files
       unstage_all = "U", -- Unstage all files
       restore = "X", -- Discard changes to file (restore to index/HEAD)

@@ -165,24 +165,30 @@ function M.toggle_view_mode(explorer)
   vim.notify("Explorer view: " .. new_mode, vim.log.levels.INFO)
 end
 
--- Stage/unstage toggle for the selected file
-function M.toggle_stage_entry(explorer, tree)
-  if not explorer or not explorer.git_root then
+-- Stage/unstage a file by path and group (lower-level function)
+-- This can be called from anywhere with explicit path and group
+-- @param git_root: git repository root
+-- @param file_path: relative path to file
+-- @param group: "staged", "unstaged", or "conflicts"
+-- @return boolean: true if operation was initiated
+function M.toggle_stage_file(git_root, file_path, group)
+  if not git_root then
     vim.notify("Stage/unstage only available in git mode", vim.log.levels.WARN)
-    return
+    return false
   end
 
-  local node = tree:get_node()
-  if not node or not node.data or node.data.type == "group" or node.data.type == "directory" then
-    return
+  if not file_path or not group then
+    return false
   end
 
-  local file_path = node.data.path
-  local group = node.data.group
+  -- Guard: only stageable groups
+  if group ~= "staged" and group ~= "unstaged" and group ~= "conflicts" then
+    return false
+  end
 
   if group == "staged" then
     -- Unstage file
-    git.unstage_file(explorer.git_root, file_path, function(err)
+    git.unstage_file(git_root, file_path, function(err)
       if err then
         vim.schedule(function()
           vim.notify(err, vim.log.levels.ERROR)
@@ -191,7 +197,7 @@ function M.toggle_stage_entry(explorer, tree)
     end)
   elseif group == "unstaged" then
     -- Stage file
-    git.stage_file(explorer.git_root, file_path, function(err)
+    git.stage_file(git_root, file_path, function(err)
       if err then
         vim.schedule(function()
           vim.notify(err, vim.log.levels.ERROR)
@@ -200,13 +206,66 @@ function M.toggle_stage_entry(explorer, tree)
     end)
   elseif group == "conflicts" then
     -- Stage conflict file (marks as resolved)
-    git.stage_file(explorer.git_root, file_path, function(err)
+    git.stage_file(git_root, file_path, function(err)
       if err then
         vim.schedule(function()
           vim.notify(err, vim.log.levels.ERROR)
         end)
       end
     end)
+  end
+
+  return true
+end
+
+-- Stage/unstage all files under a directory
+-- @param git_root: git repository root
+-- @param dir_path: relative directory path
+-- @param group: "staged" or "unstaged"
+local function toggle_stage_directory(git_root, dir_path, group)
+  if group == "staged" then
+    -- Unstage directory
+    git.unstage_file(git_root, dir_path, function(err)
+      if err then
+        vim.schedule(function()
+          vim.notify(err, vim.log.levels.ERROR)
+        end)
+      end
+    end)
+  elseif group == "unstaged" then
+    -- Stage directory
+    git.stage_file(git_root, dir_path, function(err)
+      if err then
+        vim.schedule(function()
+          vim.notify(err, vim.log.levels.ERROR)
+        end)
+      end
+    end)
+  end
+end
+
+-- Stage/unstage toggle for the selected entry in explorer (file or directory)
+function M.toggle_stage_entry(explorer, tree)
+  if not explorer or not explorer.git_root then
+    vim.notify("Stage/unstage only available in git mode", vim.log.levels.WARN)
+    return
+  end
+
+  local node = tree:get_node()
+  if not node or not node.data or node.data.type == "group" then
+    return
+  end
+
+  local entry_type = node.data.type
+  local path = node.data.path
+  local group = node.data.group
+
+  if entry_type == "directory" then
+    -- Stage/unstage entire directory
+    toggle_stage_directory(explorer.git_root, path, group)
+  else
+    -- Stage/unstage single file
+    M.toggle_stage_file(explorer.git_root, path, group)
   end
 end
 
