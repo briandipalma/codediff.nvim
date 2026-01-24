@@ -50,5 +50,4 @@ jobs:
           nvim --headless -u tests/init.lua -c "lua print('codediff version: ' .. require('codediff.version').VERSION)" -c "qa!"
 
       - name: Run tests to verify environment
-        run: |
-          ./tests/run_plenary_tests.sh 2>&1 | tail -20
+        run: ./tests/run_plenary_tests.sh
